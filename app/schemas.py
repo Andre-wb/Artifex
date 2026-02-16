@@ -1,8 +1,13 @@
+from datetime import date, time
+from typing import Optional, List, Dict, ForwardRef
 from pydantic import BaseModel, EmailStr, validator
-from typing import Optional, Dict, List
 import re
 from datetime import datetime
 from .security import validate_password
+
+# Forward references для решения циклических зависимостей
+GradeResponse = ForwardRef('GradeResponse')
+LessonResponse = ForwardRef('LessonResponse')
 
 class UserCreate(BaseModel):
     username: str
@@ -49,3 +54,109 @@ class UserResponse(BaseModel):
     created_at: datetime
     class Config:
         extra = 'forbid'
+        from_attributes = True
+
+class SubjectBase(BaseModel):
+    name: str
+    teacher_name: Optional[str] = None
+    color: Optional[str] = '#3498db'
+
+class SubjectCreate(SubjectBase):
+    pass
+
+class SubjectResponse(SubjectBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class LessonBase(BaseModel):
+    subject_id: int
+    date: date
+    lesson_number: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+    homework: Optional[str] = None
+    notes: Optional[str] = None
+
+class LessonCreate(LessonBase):
+    pass
+
+class LessonUpdate(BaseModel):
+    subject_id: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+    homework: Optional[str] = None
+    notes: Optional[str] = None
+
+class GradeBase(BaseModel):
+    subject_id: int
+    value: int
+    weight: float = 1.0
+    date: date
+    description: Optional[str] = None
+    lesson_id: Optional[int] = None
+
+class GradeCreate(GradeBase):
+    pass
+
+class GradeUpdate(BaseModel):
+    value: Optional[int] = None
+    weight: Optional[float] = None
+    description: Optional[str] = None
+
+class GradeResponse(GradeBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    subject: SubjectResponse
+    lesson: Optional['LessonResponse'] = None
+    class Config:
+        from_attributes = True
+
+class LessonResponse(LessonBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    subject: SubjectResponse
+    grades: List[GradeResponse] = []
+    class Config:
+        from_attributes = True
+
+class SubjectAverage(BaseModel):
+    subject_id: int
+    subject_name: str
+    average: float
+    grades_count: int
+    color: str
+
+class DayStats(BaseModel):
+    date: date
+    lessons_count: int
+    grades_count: int
+    average: Optional[float] = None
+
+class TimetableTemplateBase(BaseModel):
+    day_of_week: int
+    lesson_number: int
+    subject_id: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+
+class TimetableTemplateCreate(TimetableTemplateBase):
+    pass
+
+class TimetableTemplateResponse(TimetableTemplateBase):
+    id: int
+    user_id: int
+    subject: SubjectResponse
+    class Config:
+        from_attributes = True
+
+# Обновляем ссылки
+GradeResponse.model_rebuild()
+LessonResponse.model_rebuild()

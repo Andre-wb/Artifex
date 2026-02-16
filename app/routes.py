@@ -1,14 +1,8 @@
-"""
-Модуль маршрутов (роутов) для FastAPI-приложения.
-Содержит обработчики для главной страницы, регистрации, входа, профиля и т.д.
-Использует формы, безопасность, валидацию и работу с базой данных.
-"""
-
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, bindparam  # <-- добавлен импорт bindparam
+from sqlalchemy import or_, bindparam
 from typing import Optional
 from sqlalchemy.exc import IntegrityError
 import re
@@ -46,50 +40,33 @@ templates = Jinja2Templates(directory="templates")
 
 logger = logging.getLogger(__name__)
 
-# Секретный ключ для подписей (например, для подтверждения email)
-JWT_SECRET = os.getenv('SECRET_KEY')
+JWT_SECRET = os.getenv('SECRET_KEY', 'default-secret-key-change-in-production')
 serializer = URLSafeTimedSerializer(JWT_SECRET)
 
-# Флаг production (для безопасных cookie)
-is_production = Config.ENVIRONMENT == 'production'
-
+is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONMENT') else False
 
 def get_server_time() -> str:
-    """Возвращает текущее серверное время в формате YYYY-MM-DD HH:MM:SS."""
     return time.strftime('%Y-%m-%d %H:%M:%S')
-
-
-# -------------------------------------------------------------------
-# Публичные страницы
-# -------------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """Главная страница."""
     return templates.TemplateResponse("base.html", {"request": request})
-
 
 @router.get("/timetable", response_class=HTMLResponse)
 async def timetable(request: Request):
-    """Страница расписания."""
     return templates.TemplateResponse("timetable.html", {"request": request})
-
 
 @router.get("/rating", response_class=HTMLResponse)
 async def rating(request: Request):
-    """Страница рейтингов."""
     return templates.TemplateResponse("rating.html", {"request": request})
-
 
 @router.get("/profile", response_class=HTMLResponse)
 async def profile(request: Request):
-    """Страница профиля пользователя."""
     return templates.TemplateResponse("profile.html", {"request": request})
 
-
-# -------------------------------------------------------------------
-# Регистрация
-# -------------------------------------------------------------------
+@router.get("/diary-page", response_class=HTMLResponse)
+async def diary_redirect():
+    return RedirectResponse(url="/diary")
 
 @router.post("/register")
 @timing_safe_endpoint
@@ -99,11 +76,6 @@ async def register_user(
         request: Request,
         db: Session = Depends(get_db)
 ):
-    """
-    Обрабатывает POST-запрос на регистрацию нового пользователя.
-    Выполняет валидацию полей, проверку уникальности, создание записи в БД,
-    отправку письма с подтверждением email.
-    """
     try:
         form_data = await safe_form_data(request)
         data = extract_form_data(form_data, ["username", "email", "phone", "password", "confirm"])
@@ -113,7 +85,6 @@ async def register_user(
         password = data["password"]
         confirm = data["confirm"]
 
-        # Проверка заполнения всех полей
         if not all([username, email, phone, password, confirm]):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -127,7 +98,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Проверка совпадения паролей
         if password != confirm:
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -141,7 +111,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Проверка сложности пароля
         is_valid_password, password_error = validate_password(password)
         if not is_valid_password:
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -156,7 +125,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Проверка, что пароль не содержит личные данные
         is_valid_user_data, user_data_error = check_password_against_user_data(
             password=password,
             username=username,
@@ -175,10 +143,8 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Нормализация телефона (только цифры)
         normalized_phone = re.sub(r'\D', '', phone)
 
-        # Валидация email
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_pattern, email):
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -193,7 +159,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Валидация имени пользователя
         username_pattern = r'^[a-zA-Z0-9_]{3,30}$'
         if not re.match(username_pattern, username):
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -208,7 +173,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Валидация телефона (после нормализации)
         if not re.match(r'^[1-9]\d{9,14}$', normalized_phone):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -222,7 +186,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Проверка уникальности email, username, phone
         email_exists = db.query(User).filter(User.email == email).first() is not None
         username_exists = db.query(User).filter(User.username == username).first() is not None
         phone_exists = db.query(User).filter(User.phone == normalized_phone).first() is not None
@@ -266,7 +229,6 @@ async def register_user(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Создание пользователя
         try:
             user = User(
                 username=username,
@@ -278,7 +240,7 @@ async def register_user(
                 locked_until=None,
                 failed_login_attempts=0
             )
-            user.set_password(password)  # предполагается, что метод set_password хеширует пароль
+            user.set_password(password)
 
             db.add(user)
             db.commit()
@@ -286,7 +248,6 @@ async def register_user(
 
             logger.info(f"Новый пользователь зарегистрирован: ID={user.id}, username={username}")
 
-            # Отправка письма с подтверждением
             token = generate_confirmation_token(user.email)
             email_sent = await send_confirmation_email(user.email, token, request)
 
