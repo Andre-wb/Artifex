@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+<!-- Хедер / Навигация -->
+<header>
+    <nav>
+        <a href="/timetable">Календарь</a>
+        <a href="/rating">Аналитика</a>
+        <a href="/profile">Профиль</a>
+    </nav>
+</header>
+
+<main>
+    {% block content %}
+    <!-- Содержимое страницы будет здесь -->
+    {% endblock %}
+</main>
+
+<!-- Поддержка ИИ (саппорт) -->
+
+    <div>
+        <p><span> AI-ассистент </span></p>
+    </div>
+
+<!-- на всякий -->
+{% block scripts %}{% endblock %}
+</body>
+</html>
