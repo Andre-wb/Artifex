@@ -60,3 +60,6 @@ class Config:
     def get_database_url(cls):
         db_path = os.path.join(cls.BASE_DIR, 'app.db')
         return f"sqlite:///{db_path}"
+
+    PRIVATE_KEY_PATH = 'secrets/private.pem'
+    PUBLIC_KEY_PATH = 'secrets/public.pem'

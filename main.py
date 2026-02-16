@@ -9,6 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from app.routes import router
 from app.waf import setup_waf, DEFAULT_WAF_CONFIG
 import logging
+from app.auth import key_manager
+
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -44,3 +46,8 @@ waf_config = {
 # Инициализация WAF: middleware и роуты управления подключаются к приложению
 # Функция setup_waf возвращает экземпляр WAFEngine для дальнейшего использования (опционально)
 waf_engine = setup_waf(app, waf_config)
+
+key_manager.initialize()
+
+if key_manager.should_rotate_keys():
+    key_manager.rotate_keys()
