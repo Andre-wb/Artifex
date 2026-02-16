@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 # Константы JWT — используются при формировании и проверке полезной нагрузки токена
-JWT_ISSUER = "borisrent-api"               # издатель токена (наш сервис)
-JWT_AUDIENCE = "borisrent-webapp"           # целевая аудитория (например, веб-приложение)
+JWT_ISSUER = "artifex-api"               # издатель токена (наш сервис)
+JWT_AUDIENCE = "artifex-webapp"           # целевая аудитория (например, веб-приложение)
 JWT_TOKEN_TYPES = {"access", "refresh", "service"}  # допустимые типы токенов
 
 
