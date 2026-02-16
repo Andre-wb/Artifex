@@ -21,7 +21,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from .config import Сonfig  # импортируем объект конфигурации (должен содержать SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS)
+from .config import Config  # импортируем объект конфигурации (должен содержать SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS)
 from .database import get_db
 from .models import User, RefreshToken
 

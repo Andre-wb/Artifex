@@ -17,7 +17,7 @@ class Config:
 
     # Секретный ключ для подписей (JWT, CSRF, etc.)
     # В production обязательно должен быть задан через переменную окружения
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = os.getenv('SECRET_KEY')
 
     # Базовая директория проекта (для формирования путей)
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -55,3 +55,8 @@ class Config:
             'password': os.getenv('SMTP_PASSWORD'),
             'use_tls': True
         }
+
+    @classmethod
+    def get_database_url(cls):
+        db_path = os.path.join(cls.BASE_DIR, 'app.db')
+        return f"sqlite:///{db_path}"
