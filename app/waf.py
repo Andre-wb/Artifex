@@ -930,7 +930,7 @@ class WAFMiddleware:
                     for f in critical_findings[:3]   # ограничим тремя для краткости
                 ],
                 'message': 'Ваш запрос содержит признаки атаки и был заблокирован.',
-                'support_contact': 'security@borisrent.com'
+                'support_contact': 'artifex.dnevnik@gmail.com'
             }, ensure_ascii=False).encode('utf-8')
         }
 
@@ -1305,7 +1305,7 @@ class WAFRequestBodyMiddleware(BaseHTTPMiddleware):
                 for f in critical_findings[:3]
             ],
             'message': 'Ваш запрос содержит признаки атаки и был заблокирован.',
-            'support_contact': 'security@borisrent.com'
+            'support_contact': 'artifex.dnevnik@gmail.com'
         }
 
         logger.warning(
