@@ -4,19 +4,42 @@
 
 {% block content %}
 <h1>📅 Календарь</h1>
-<p>Просмотр записей по датам</p>
 
-<!-- Навигация по месяцам -->
-<div>
-    <button>Январь 2026</button>
-    <span>Февраль 2026</span>
-    <button>Март 2026 </button>
+<div class="days-carousel">
+    <div class="day-card">
+        <div class="day-header">
+            <span class="day-week"></span>
+            <span class="day-date"></span>
+        </div>
+
+        <div class="lessons-list">
+            <div class="lesson-item">
+                <div class="lesson-time"></div>
+                <div class="lesson-info">
+                    <div class="lesson-name"></div>
+                    <div class="lesson-details">
+                        <span class="lesson-room"></span>
+                        <span class="lesson-teacher"></span>
+                    </div>
+                </div>
+                <div class="lesson-grade great"></div>
+            </div>
+        </div>
+
+        <div class="day-footer">
+            <span class="lessons-edit"></span>
+        </div>
+    </div>
 </div>
 
-<table>
-    <!-- Здесь будет таблица с раписанием-->
-</table>
+<!-- Индикаторы навигации -->
+<div class="carousel-nav">
+    <button class="nav-arrow prev" onclick="document.querySelector('.days-carousel').scrollBy({left: -400, behavior: 'smooth'})">←</button>
+    <button class="nav-arrow next" onclick="document.querySelector('.days-carousel').scrollBy({left: 400, behavior: 'smooth'})">→</button>
+</div>
 
-<p><small>✔️ Заливка означает наличие записи</small></p>
-
+<!-- Дополнительно: текущая дата -->
+<div class="current-date-info">
+    <span class="current-date">Сегодня: 16 марта 2024</span>
+</div>
 {% endblock %}

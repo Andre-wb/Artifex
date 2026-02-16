@@ -1,33 +1,76 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-<!-- Хедер / Навигация -->
 <header>
     <nav>
-        <a href="/timetable">Календарь</a>
-        <a href="/rating">Аналитика</a>
-        <a href="/profile">Профиль</a>
+        <a href="/" class="logo">
+            <span class="logo-text">📚 Дневник</span>
+        </a>
+
+        <div class="desktop-nav">
+            <a href="/diary" class="{% if request.url.path == '/diary' %}active{% endif %}">
+                Дневник
+            </a>
+            <a href="/stats" class="{% if request.url.path == '/stats' %}active{% endif %}">
+                Статистика
+            </a>
+            <a href="/timetable" class="{% if request.url.path == '/timetable' %}active{% endif %}">
+                Расписание
+            </a>
+            <a href="/profile" class="{% if request.url.path == '/profile' %}active{% endif %}">
+                Профиль
+            </a>
+        </div>
+
+        <div class="nav-right">
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+                <span class="theme-icon">🌙</span>
+            </button>
+
+            <div class="user-avatar" onclick="window.location.href='/profile'">
+                <span>👤</span>
+            </div>
+
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Меню">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
     </nav>
 </header>
 
 <main>
     {% block content %}
-    <!-- Содержимое страницы будет здесь -->
     {% endblock %}
 </main>
 
-<!-- Поддержка ИИ (саппорт) -->
+<script>
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    }
 
-    <div>
-        <p><span> AI-ассистент </span></p>
-    </div>
+    function toggleMobileMenu() {
+        const nav = document.querySelector('.desktop-nav');
+        nav.classList.toggle('show');
+    }
 
-<!-- на всякий -->
+    // Загрузка сохраненной темы
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>
