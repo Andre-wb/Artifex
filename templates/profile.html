@@ -6,48 +6,5 @@
 {% block content %}
 <h1>👤 Профиль пользователя</h1>
 
-<!-- Информация о пользователе (заглушка) -->
-<div style="border:1px solid #ccc; padding:20px; max-width:400px;">
-    <p><strong>Имя:</strong> Алексей</p>
-    <p><strong>Email:</strong> alexey@example.com</p>
-    <p><strong>Дата регистрации:</strong> 01.01.2026</p>
-    <p><strong>Всего записей:</strong> 47</p>
-</div>
 
-<!-- Настройки приложения -->
-<div style="margin-top:30px;">
-    <h3>⚙️ Настройки</h3>
-
-    <form method="post" action="/update-profile">
-        <label>Имя:</label>
-        <input type="text" name="name" value="Алексей"><br><br>
-
-        <label>Тема оформления:</label>
-        <select name="theme">
-            <option selected>Светлая (мягкая)</option>
-            <option>Тёмная</option>
-            <option>Системная</option>
-        </select><br><br>
-
-        <label>Уведомления:</label>
-        <input type="checkbox" checked> Напоминать писать вечером<br><br>
-
-        <button type="submit">Сохранить настройки</button>
-    </form>
-</div>
-
-<!-- Экспорт данных -->
-<div style="margin-top:30px;">
-    <h3>💾 Экспорт данных</h3>
-    <button>Скачать все записи (PDF)</button>
-    <button>Скачать как TXT</button>
-    <button>Экспорт в JSON</button>
-</div>
-
-<!-- Опасная зона -->
-<div style="margin-top:40px; border-top:2px solid red; padding-top:20px;">
-    <h3 style="color:red;">Опасная зона</h3>
-    <button style="border-color:red;">Выйти из аккаунта</button>
-    <button style="border-color:red;">Удалить аккаунт</button>
-</div>
 {% endblock %}
