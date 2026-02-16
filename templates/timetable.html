@@ -4,19 +4,88 @@
 
 {% block content %}
 <h1>📅 Календарь</h1>
-<p>Просмотр записей по датам</p>
 
-<!-- Навигация по месяцам -->
-<div>
-    <button>Январь 2026</button>
-    <span>Февраль 2026</span>
-    <button>Март 2026 </button>
+<div class="days-carousel">
+    <div class="day-card">
+        <div class="day-header">
+            <span class="day-week">Понедельник</span>
+            <span class="day-date">16.02.2026</span>
+        </div>
+
+        <div class="lessons-list">
+            <div class="lesson-item">
+                <div class="lesson-time">08:30 - 09:15</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">Математика</div>
+                    <div class="lesson-details">
+                        <span class="lesson-room">Каб. 301</span>
+                        <span class="lesson-teacher">Иванова М.И.</span>
+                    </div>
+                </div>
+                <div class="lesson-grade great">5</div>
+            </div>
+
+            <div class="lesson-item">
+                <div class="lesson-time">09:25 - 10:10</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">Русский язык</div>
+                    <div class="lesson-details">
+                        <span class="lesson-room">Каб. 205</span>
+                        <span class="lesson-teacher">Петрова А.С.</span>
+                    </div>
+                </div>
+                <div class="lesson-grade great">4</div>
+            </div>
+
+            <div class="lesson-item">
+                <div class="lesson-time">10:20 - 11:05</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">Физика</div>
+                    <div class="lesson-details">
+                        <span class="lesson-room">Каб. 412</span>
+                        <span class="lesson-teacher">Сидоров П.В.</span>
+                    </div>
+                </div>
+                <div class="lesson-grade middle">3</div>
+            </div>
+
+            <div class="lesson-item">
+                <div class="lesson-time">11:25 - 12:10</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">Физкультура</div>
+                    <div class="lesson-details">
+                        <span class="lesson-room">Спортзал</span>
+                    </div>
+                </div>
+                <div class="lesson-grade bad">2</div>
+            </div>
+
+            <div class="lesson-item">
+                <div class="lesson-time">11:25 - 12:10</div>
+                <div class="lesson-info">
+                    <div class="lesson-name">Физкультура</div>
+                    <div class="lesson-details">
+                        <span class="lesson-room">Спортзал</span>
+                    </div>
+                </div>
+                <div class="lesson-grade skipped">П</div>
+            </div>
+        </div>
+
+        <div class="day-footer">
+            <span class="lessons-edit">изменить</span>
+        </div>
+    </div>
 </div>
 
-<table>
-    <!-- Здесь будет таблица с раписанием-->
-</table>
+<!-- Индикаторы навигации -->
+<div class="carousel-nav">
+    <button class="nav-arrow prev" onclick="document.querySelector('.days-carousel').scrollBy({left: -400, behavior: 'smooth'})">←</button>
+    <button class="nav-arrow next" onclick="document.querySelector('.days-carousel').scrollBy({left: 400, behavior: 'smooth'})">→</button>
+</div>
 
-<p><small>✔️ Заливка означает наличие записи</small></p>
-
+<!-- Дополнительно: текущая дата -->
+<div class="current-date-info">
+    <span class="current-date">Сегодня: 16 марта 2024</span>
+</div>
 {% endblock %}

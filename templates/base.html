@@ -1,17 +1,55 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
 </head>
 <body>
 <!-- Хедер / Навигация -->
 <header>
     <nav>
-        <a href="/timetable">Календарь</a>
-        <a href="/rating">Аналитика</a>
-        <a href="/profile">Профиль</a>
+        <!-- Логотип или название (можно заменить на иконку) -->
+        <a href="/" class="logo">
+            <span class="logo-text">📚 Дневник</span>
+        </a>
+
+        <!-- Десктопная навигация -->
+        <div class="desktop-nav">
+            <a href="/timetable" class="{% if request.url.path == '/timetable' %}active{% endif %}">
+                Расписание
+            </a>
+            <a href="/profile" class="{% if request.url.path == '/profile' %}active{% endif %}">
+                Профиль
+            </a>
+            <a href="/rating" class="{% if request.url.path == '/rating' %}active{% endif %}">
+                Рейтинг
+            </a>
+            <a href="/calendar" class="{% if request.url.path == '/calendar' %}active{% endif %}">
+                Календарь
+            </a>
+        </div>
+
+        <!-- Правая часть навигации -->
+        <div class="nav-right">
+            <!-- Кнопка переключения темы -->
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+                <span class="theme-icon">🌙</span>
+            </button>
+
+            <!-- Аватар пользователя (можно добавить) -->
+            <div class="user-avatar" onclick="window.location.href='/profile'">
+                <span>👤</span>
+            </div>
+
+            <!-- Кнопка мобильного меню -->
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Меню">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
     </nav>
 </header>
 
