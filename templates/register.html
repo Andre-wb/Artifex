@@ -11,16 +11,18 @@
   <form method="POST" novalidate>
     <!-- Имя пользователя -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bx-user.svg') }}" alt="user"></span>
-      <input type="text" id="username" name="username" class="input"
-             value="{{ username or '' }}"
-             required
-             minlength="3"
-             maxlength="30"
-             pattern="[a-zA-Z0-9_]+"
-             title="Только буквы, цифры и подчеркивания (3-30 символов)"
-             placeholder="Имя пользователя">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bx-user.svg') }}" alt="user"></span>
+        <input type="text" id="username" name="username" class="input"
+               value="{{ username or '' }}"
+               required
+               minlength="3"
+               maxlength="30"
+               pattern="[a-zA-Z0-9_]+"
+               title="Только буквы, цифры и подчеркивания (3-30 символов)"
+               placeholder="Имя пользователя">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'username' in error %}
       <span class="error">{{ error.username }}</span>
       {% endif %}
@@ -28,13 +30,15 @@
 
     <!-- Email -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bx-envelope.svg') }}" alt="email"></span>
-      <input type="email" id="email" name="email" class="input"
-             value="{{ email or '' }}"
-             required
-             title="Введите корректный email адрес"
-             placeholder="Email">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bx-envelope.svg') }}" alt="email"></span>
+        <input type="email" id="email" name="email" class="input"
+               value="{{ email or '' }}"
+               required
+               title="Введите корректный email адрес"
+               placeholder="Email">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'email' in error %}
       <span class="error">{{ error.email }}</span>
       {% endif %}
@@ -42,14 +46,16 @@
 
     <!-- Телефон -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bx-phone.svg') }}" alt="phone"></span>
-      <input type="tel" id="phone" name="phone" class="input"
-             value="{{ phone or '' }}"
-             required
-             pattern="[\+\d\s\-\(\)]+"
-             title="Пример: +7 999 123-45-67 или 8 999 123-45-67"
-             placeholder="Телефон">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bx-phone.svg') }}" alt="phone"></span>
+        <input type="tel" id="phone" name="phone" class="input"
+               value="{{ phone or '' }}"
+               required
+               pattern="[\+\d\s\-\(\)]+"
+               title="Пример: +7 999 123-45-67 или 8 999 123-45-67"
+               placeholder="Телефон">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'phone' in error %}
       <span class="error">{{ error.phone }}</span>
       {% endif %}
@@ -57,14 +63,16 @@
 
     <!-- Пароль -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" alt="lock"></span>
-      <input type="password" id="password" name="password" class="input"
-             required
-             minlength="12"
-             maxlength="128"
-             oninput="checkPasswordStrength(this.value)"
-             placeholder="Пароль">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" alt="lock"></span>
+        <input type="password" id="password" name="password" class="input"
+               required
+               minlength="12"
+               maxlength="128"
+               oninput="checkPasswordStrength(this.value)"
+               placeholder="Пароль">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'password' in error %}
       <span class="error">{{ error.password }}</span>
       {% endif %}
@@ -79,10 +87,13 @@
 
     <!-- Подтверждение пароля -->
     <div class="form-group">
-      <input type="password" id="confirm" name="confirm" class="input"
-             required
-             placeholder="Подтвердите пароль">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" alt="lock"></span>
+        <input type="password" id="confirm" name="confirm" class="input"
+               required
+               placeholder="Подтвердите пароль">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'confirm' in error %}
       <span class="error">{{ error.confirm }}</span>
       {% endif %}
@@ -90,12 +101,14 @@
 
     <!-- Школа -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bxs-school.svg') }}" alt="school"></span>
-      <input type="text" id="school" name="school" class="input"
-             value="{{ school or '' }}"
-             required
-             placeholder="Школа (номер или название)">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bxs-school.svg') }}" alt="school"></span>
+        <input type="text" id="school" name="school" class="input"
+               value="{{ school or '' }}"
+               required
+               placeholder="Школа (номер или название)">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
       {% if error and 'school' in error %}
       <span class="error">{{ error.school }}</span>
       {% endif %}
@@ -103,13 +116,15 @@
 
     <!-- Класс -->
     <div class="form-group">
-      <span><img src="{{ url_for('static', path='assets/bxs-book-bookmark.svg') }}" alt="grade"></span>
-      <input type="text" id="grade" name="grade" class="input"
-             value="{{ grade or '' }}"
-             {% if not is_teacher %}required{% endif %}
-             placeholder="Класс (например, 7А)">
-      <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
-      <small style="display: block; margin-top: 5px;">Для учеников обязательно, для учителей можно оставить пустым</small>
+      <div class="input-wrapper">
+        <span class="input-icon"><img src="{{ url_for('static', path='assets/bxs-book-bookmark.svg') }}" alt="grade"></span>
+        <input type="text" id="grade" name="grade" class="input"
+               value="{{ grade or '' }}"
+               {% if not is_teacher %}required{% endif %}
+               placeholder="Класс (например, 7А)">
+        <svg class="line-svg"><path d="M0 1 L100% 1"/></svg>
+      </div>
+      <small>Для учеников обязательно, для учителей можно оставить пустым</small>
       {% if error and 'grade' in error %}
       <span class="error">{{ error.grade }}</span>
       {% endif %}
@@ -117,13 +132,13 @@
 
     <!-- Чекбокс "Я учитель" -->
     <div class="form-group checkbox-group">
-      <label>
+      <label class="checkbox-label">
         <input type="checkbox" name="is_teacher" value="true" {% if is_teacher %}checked{% endif %}>
-        Я учитель
+        <span class="checkbox-text">Я учитель</span>
       </label>
     </div>
 
-    <button type="submit" class="button-login" style="margin-top: 30px;">Зарегистрироваться</button>
+    <button type="submit" class="button-login">Зарегистрироваться</button>
   </form>
 
   <!-- Отображение ошибок (строковых или словарных) -->

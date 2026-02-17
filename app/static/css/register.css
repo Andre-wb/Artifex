@@ -1,25 +1,24 @@
-/* register.css */
-/* Стили для страницы регистрации */
+/* register.css - исправленная версия */
+@import "styles.css";
 
 .form-container {
-    max-width: 440px;
+    max-width: 480px;
     margin: 40px auto;
     padding: 40px;
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: var(--border-radius-card, 24px);
+    border-radius: var(--border-radius-card, 28px);
     box-shadow: var(--shadow-card, 0 20px 40px rgba(0,0,0,0.08));
     border: 1px solid var(--border-card, rgba(255,255,255,0.5));
 }
 
 /* Заголовок */
 .login-header {
-    font-size: 32px;
+    font-size: 34px;
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: -0.02em;
     margin-bottom: var(--spacing-xxxl, 32px);
-    color: var(--text-primary, #1e293b);
     text-align: center;
     background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
     -webkit-background-clip: text;
@@ -30,27 +29,66 @@
 /* Группа формы */
 .form-group {
     margin-bottom: var(--spacing-xl, 24px);
+}
+
+/* Обертка для инпута с иконкой */
+.input-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 /* Иконка в поле */
-.form-group span {
+.input-icon {
     position: absolute;
     left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
+    top: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.5;
-    transition: opacity var(--transition-fast, 0.2s);
+    width: 24px;
+    pointer-events: none;
+    z-index: 2;
 }
 
-.form-group span img {
+.input-icon img {
     width: 20px;
     height: 20px;
     filter: invert(0.3);
+    transition: opacity var(--transition-fast, 0.2s);
+    display: block;
+}
+
+/* Специфичные корректировки для разных иконок */
+.input-icon img[alt="lock"] {
+    width: 18px;
+    height: 18px;
+}
+
+.input-icon img[alt="school"] {
+    width: 22px;
+    height: 22px;
+}
+
+.input-icon img[alt="grade"] {
+    width: 19px;
+    height: 19px;
+}
+
+.input-icon img[alt="user"] {
+    width: 21px;
+    height: 21px;
+}
+
+.input-icon img[alt="email"] {
+    width: 20px;
+    height: 20px;
+}
+
+.input-icon img[alt="phone"] {
+    width: 19px;
+    height: 19px;
 }
 
 /* Поле ввода */
@@ -64,8 +102,7 @@
     transition: all var(--transition-fast, 0.2s);
     color: var(--text-primary, #1e293b);
     font-family: var(--font-family, -apple-system, BlinkMacSystemFont, sans-serif);
-    position: relative;
-    z-index: 1;
+    line-height: 1.4;
 }
 
 /* Декоративная линия */
@@ -97,7 +134,7 @@
 
 .input:focus {
     outline: none;
-    background: rgba(102, 126, 234, 0.05);
+    background: rgba(102, 126, 234, 0.03);
 }
 
 .input::placeholder {
@@ -109,6 +146,83 @@
 
 .input:focus::placeholder {
     opacity: 0.3;
+}
+
+.input-wrapper:hover .input-icon img {
+    opacity: 0.8;
+}
+
+/* Подсказка для класса */
+.form-group small {
+    display: block;
+    margin-top: var(--spacing-xs, 8px);
+    margin-left: var(--spacing-lg, 16px);
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+    opacity: 0.8;
+}
+
+/* Группа чекбокса */
+.checkbox-group {
+    margin: var(--spacing-xl, 24px) 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 12px);
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-primary, #1e293b);
+    user-select: none;
+    padding: var(--spacing-xs, 4px) 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 2px solid var(--border-lesson, #e2e8f0);
+    border-radius: 6px;
+    transition: all var(--transition-fast, 0.2s);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    border-color: transparent;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    margin-top: -2px;
+}
+
+.checkbox-label input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+}
+
+.checkbox-label input[type="checkbox"]:hover {
+    border-color: var(--primary-start, #667eea);
+    transform: scale(1.05);
+}
+
+.checkbox-text {
+    line-height: 1.4;
 }
 
 /* Индикатор силы пароля */
@@ -139,42 +253,44 @@
 /* Кнопка регистрации */
 .button-login {
     width: 100%;
-    padding: 16px;
+    padding: 18px;
     background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
     color: var(--text-white, white);
     border: none;
-    border-radius: 14px;
+    border-radius: 16px;
     font-size: 17px;
     font-weight: var(--font-weight-semibold, 600);
     cursor: pointer;
     transition: all var(--transition-default, 0.3s);
     margin-top: var(--spacing-xxl, 24px);
     letter-spacing: -0.01em;
-    box-shadow: var(--shadow-nav-arrow, 0 2px 8px rgba(0,0,0,0.1));
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.2));
 }
 
 .button-login:hover {
-    transform: scale(1.01);
-    box-shadow: var(--shadow-card-hover, 0 30px 50px rgba(0,0,0,0.15));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover, 0 20px 30px rgba(102, 126, 234, 0.3));
     filter: brightness(1.1);
 }
 
 .button-login:active {
-    transform: scale(0.99);
+    transform: translateY(0);
+    box-shadow: var(--shadow-nav-arrow, 0 2px 6px rgba(102, 126, 234, 0.2));
 }
 
 /* Ссылка на вход */
 .register-link {
-    display: block;
+    display: inline-block;
     text-align: center;
-    margin-top: var(--spacing-xl, 20px);
+    width: 100%;
+    margin-top: var(--spacing-xl, 24px);
     color: var(--text-secondary, #64748b);
     text-decoration: none;
     font-size: 15px;
     font-weight: var(--font-weight-medium, 500);
-    transition: color var(--transition-fast, 0.2s);
+    transition: all var(--transition-fast, 0.2s);
     position: relative;
-    padding-bottom: 2px;
+    padding-bottom: 3px;
 }
 
 .register-link::after {
@@ -194,30 +310,33 @@
 }
 
 .register-link:hover::after {
-    width: 100px;
+    width: 140px;
 }
 
 /* Сообщения об ошибках */
-.error, .error-list {
+.error {
     color: var(--grade-bad-text, #920e0e);
     font-size: 13px;
-    margin-top: var(--spacing-xs, 4px);
+    margin-top: var(--spacing-xs, 6px);
     padding-left: var(--spacing-lg, 16px);
-    list-style: none;
+    display: block;
     animation: slideDown var(--transition-fast, 0.2s);
 }
 
-.error-list li, .success-list li {
-    padding: var(--spacing-md, 12px) var(--spacing-lg, 16px);
-    border-radius: var(--border-radius-lesson, 12px);
-    margin: var(--spacing-sm, 8px) 0;
-    font-size: 14px;
+.error-list {
+    list-style: none;
+    margin-top: var(--spacing-lg, 16px);
 }
 
 .error-list li {
-    background: var(--grade-bad-bg, #fb242b);
+    padding: var(--spacing-md, 14px) var(--spacing-lg, 18px);
+    border-radius: var(--border-radius-lesson, 14px);
+    margin: var(--spacing-sm, 8px) 0;
+    font-size: 14px;
+    font-weight: var(--font-weight-medium, 500);
+    background: rgba(251, 36, 43, 0.1);
     color: var(--grade-bad-text, #920e0e);
-    opacity: 0.9;
+    border-left: 4px solid var(--grade-bad-bg, #fb242b);
 }
 
 /* Сообщения об успехе */
@@ -227,20 +346,20 @@
 }
 
 .success-list li {
-    background: var(--grade-great-bg, #4ade80);
+    padding: var(--spacing-md, 14px) var(--spacing-lg, 18px);
+    border-radius: var(--border-radius-lesson, 14px);
+    margin: var(--spacing-sm, 8px) 0;
+    font-size: 14px;
+    font-weight: var(--font-weight-medium, 500);
+    background: rgba(74, 222, 128, 0.1);
     color: var(--grade-great-text, #166534);
+    border-left: 4px solid var(--grade-great-bg, #4ade80);
 }
 
 /* Анимации */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes slideDown {
@@ -275,7 +394,7 @@
     color: var(--text-secondary, #94a3b8);
 }
 
-[data-theme="dark"] .form-group span img {
+[data-theme="dark"] .input-icon img {
     filter: invert(0.8);
 }
 
@@ -284,7 +403,7 @@
 }
 
 [data-theme="dark"] .input:focus {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="dark"] .input:focus ~ .line-svg path {
@@ -295,34 +414,40 @@
     stroke: var(--primary-end, #2e1065);
 }
 
+[data-theme="dark"] .checkbox-label {
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .checkbox-label input[type="checkbox"] {
+    border-color: var(--border-lesson, #475569);
+}
+
+[data-theme="dark"] .form-group small,
+[data-theme="dark"] .strength-text,
 [data-theme="dark"] .register-link {
     color: var(--text-secondary, #94a3b8);
 }
 
-[data-theme="dark"] .register-link:hover {
-    color: var(--primary-start, #4c1d95);
-}
-
 [data-theme="dark"] .error-list li {
-    background: var(--grade-bad-bg, #ef4444);
-    color: var(--grade-bad-text, #7f1d1d);
+    background: rgba(239, 68, 68, 0.15);
+    border-left-color: var(--grade-bad-bg, #ef4444);
 }
 
 [data-theme="dark"] .success-list li {
-    background: var(--grade-great-bg, #22c55e);
-    color: var(--grade-great-text, #14532d);
+    background: rgba(34, 197, 94, 0.15);
+    border-left-color: var(--grade-great-bg, #22c55e);
 }
 
 /* Адаптивность */
-@media (max-width: 480px) {
+@media (max-width: 520px) {
     .form-container {
         margin: var(--spacing-xl, 20px) auto;
-        padding: var(--spacing-xxxl, 30px) var(--spacing-xl, 20px);
+        padding: var(--spacing-xxl, 30px) var(--spacing-xl, 20px);
         max-width: 90%;
     }
 
     .login-header {
-        font-size: 28px;
+        font-size: 30px;
         margin-bottom: var(--spacing-xxl, 24px);
     }
 
@@ -331,16 +456,37 @@
         font-size: 15px;
     }
 
-    .button-login {
-        padding: 15px;
-        font-size: 16px;
+    .input-icon {
+        left: 12px;
+    }
+
+    .input-icon img {
+        width: 18px;
+        height: 18px;
     }
 }
 
-/* Дополнительные улучшения для мобильных */
+@media (max-width: 480px) {
+    .form-container {
+        padding: var(--spacing-xl, 25px) var(--spacing-lg, 16px);
+    }
+
+    .login-header {
+        font-size: 28px;
+    }
+
+    .form-group small {
+        font-size: 11px;
+    }
+
+    .error {
+        font-size: 12px;
+    }
+}
+
 @media (max-width: 360px) {
     .form-container {
-        padding: var(--spacing-xl, 20px) var(--spacing-lg, 16px);
+        padding: var(--spacing-lg, 20px) var(--spacing-md, 12px);
     }
 
     .login-header {
@@ -349,10 +495,28 @@
 
     .input {
         padding: 14px 14px 14px 42px;
+        font-size: 14px;
     }
 
-    .form-group span img {
-        width: 18px;
-        height: 18px;
+    .input-icon {
+        left: 10px;
+    }
+
+    .input-icon img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Стили для планшетов */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .form-container {
+        max-width: 520px;
+        padding: 45px;
     }
 }
