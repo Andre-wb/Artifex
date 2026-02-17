@@ -1,0 +1,15 @@
+
+{% extends "base.html" %}
+
+{% block title %}Требуется авторизация{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 50px;">
+  <h1><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" class="invert"> Требуется авторизация</h1>
+  <p style="color: var(--text-white);">Для доступа к этой странице необходимо войти в систему.</p>
+  <div style="margin-top: 30px;">
+    <a href="/login">Войти</a>
+    <a href="/register">Зарегистрироваться</a>
+  </div>
+</div>
+{% endblock %}
