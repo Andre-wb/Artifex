@@ -120,28 +120,6 @@ async def stats_page(
         }
     )
 
-@router.get("/templates", response_class=HTMLResponse)
-async def templates_page(
-        request: Request,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
-):
-    subjects = db.query(Subject).all()
-    templates = db.query(TimetableTemplate).filter(
-        TimetableTemplate.user_id == current_user.id
-    ).order_by(TimetableTemplate.day_of_week, TimetableTemplate.lesson_number).all()
-
-    return templates.TemplateResponse(
-        "templates.html",
-        {
-            "request": request,
-            "user": current_user,
-            "subjects": subjects,
-            "templates": templates,
-            "weekdays": ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-        }
-    )
-
 # API для предметов
 @router.get("/api/subjects", response_model=List[SubjectResponse])
 async def get_subjects(

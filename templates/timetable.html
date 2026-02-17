@@ -1,13 +1,94 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}Шаблон расписания{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/templates.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1>📅 Шаблон расписания</h1>
+
+<div class="templates-container">
+    <button class="generate-btn" onclick="generateLessons()">
+        🔄 Создать уроки на 2 недели вперед из шаблона
+    </button>
+
+    {% for day_index in range(7) %}
+    <div class="day-section" data-day="{{ day_index }}">
+        <div class="day-title">{{ weekdays[day_index] }}</div>
+
+        <div class="templates-list" id="templates-{{ day_index }}">
+            {% for template in templates if template.day_of_week == day_index %}
+            <div class="template-lesson" data-template-id="{{ template.id }}">
+                <div class="lesson-number">{{ template.lesson_number }}.</div>
+                <div class="lesson-subject">{{ template.subject.name }}</div>
+                <div class="lesson-time">
+                    {% if template.start_time %}
+                    {{ template.start_time }}{% if template.end_time %} - {{ template.end_time }}{% endif %}
+                    {% else %}
+                    Время не указано
+                    {% endif %}
+                </div>
+                <div class="lesson-actions">
+                    <button onclick="editTemplate({{ template.id }})">✏️</button>
+                    <button onclick="deleteTemplate({{ template.id }})">🗑️</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <button class="add-lesson-btn" onclick="showAddTemplateModal({{ day_index }})">
+            + Добавить урок в {{ weekdays[day_index]|lower }}
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<div id="templateModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Добавить урок в шаблон</h2>
+        <form id="templateForm">
+            <input type="hidden" id="templateId" name="templateId">
+            <input type="hidden" id="templateDay" name="day_of_week">
+
+            <div class="form-group">
+                <label for="templateSubject">Предмет *</label>
+                <select id="templateSubject" name="subject_id" required>
+                    <option value="">Выберите предмет</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="templateLessonNumber">Номер урока *</label>
+                <input type="number" id="templateLessonNumber" name="lesson_number" min="1" max="8" required>
+            </div>
+
+            <div class="form-group">
+                <label for="templateStartTime">Время начала</label>
+                <input type="time" id="templateStartTime" name="start_time">
+            </div>
+
+            <div class="form-group">
+                <label for="templateEndTime">Время окончания</label>
+                <input type="time" id="templateEndTime" name="end_time">
+            </div>
+
+            <div class="form-group">
+                <label for="templateRoom">Кабинет</label>
+                <input type="text" id="templateRoom" name="room">
+            </div>
+
+            <div class="modal-buttons">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', path='js/add_lesson.js') }}"></script>
+{% endblock %}

@@ -14,11 +14,15 @@ from email.mime.multipart import MIMEMultipart
 import time
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import os
+from datetime import datetime, timedelta, date
+from .models import Subject, TimetableTemplate, Lesson, Grade
+from sqlalchemy.orm import Session
 
 from .config import Config
 from .secure_cookie import create_secure_cookie
 from .email import safe_form_data, send_confirmation_email, confirm_token, extract_form_data, generate_confirmation_token
 from .database import get_db
+from .models import User, RefreshToken, TimetableTemplate, Subject
 from .models import User, RefreshToken, TwoFactorCode  # добавлено TwoFactorCode
 from .auth import (
     get_current_user, get_current_user_optional,
@@ -41,6 +45,7 @@ from .security_utils import (
 )
 from .create_csrf_cookie import create_csrf_cookie
 
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 app = FastAPI()
@@ -60,8 +65,28 @@ async def home(request: Request):
     return templates.TemplateResponse("base.html", {"request": request})
 
 @router.get("/timetable", response_class=HTMLResponse)
-async def timetable(request: Request):
-    return templates.TemplateResponse("timetable.html", {"request": request})
+async def timetable(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    # Получаем предметы и шаблоны расписания
+    subjects = db.query(Subject).all()  # Убедитесь, что модель Subject импортирована
+    timetable_templates = db.query(TimetableTemplate).filter(
+        TimetableTemplate.user_id == current_user.id
+    ).order_by(TimetableTemplate.day_of_week, TimetableTemplate.lesson_number).all()
+
+    # Используем templates (объект Jinja2Templates) для рендеринга
+    return templates.TemplateResponse(
+        "timetable.html",
+        {
+            "request": request,
+            "user": current_user,
+            "subjects": subjects,
+            "templates": timetable_templates,
+            "weekdays": ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+        }
+    )
 
 @router.get("/rating", response_class=HTMLResponse)
 async def rating(request: Request):
@@ -489,6 +514,7 @@ async def login(
     """
     try:
         form_data = await safe_form_data(request)
+
         data = extract_form_data(form_data, ["credential", "password"])
         credential = data["credential"]
         password = data["password"]
@@ -498,12 +524,14 @@ async def login(
 
         if not credential or not password:
             new_cookie_token, new_form_token = generate_double_csrf_token()
+
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Все поля обязательны для заполнения",
                 "credential": credential,
                 "csrf_token": new_form_token
             })
+
             create_csrf_cookie(response, new_cookie_token)
             return response
 
@@ -516,10 +544,11 @@ async def login(
             )
         ).params(cred=credential).first()
 
-        # Проверка блокировки
+        # Проверка блокировки аккаунта
         if user and user.locked_until and user.locked_until > datetime.utcnow():
             _ = user.check_password(password)
             logger.warning(f"Попытка входа в заблокированный аккаунт: {credential}")
+
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
@@ -765,7 +794,6 @@ async def edit_profile_page(request: Request, user: User = Depends(get_current_u
         "user": user,
         "csrf_token": form_token
     })
-
     create_csrf_cookie(response, cookie_token)
     return response
 
@@ -848,6 +876,86 @@ async def edit_profile(
 
     create_csrf_cookie(response, new_cookie_token)
     return response
+
+
+@router.post("/diary/api/generate-from-template")
+async def generate_lessons_from_template(
+        request: Request,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Генерирует уроки на 2 недели вперед из шаблона расписания"""
+    try:
+        # Получаем шаблоны пользователя
+        templates = db.query(TimetableTemplate).filter(
+            TimetableTemplate.user_id == current_user.id
+        ).all()
+
+        if not templates:
+            return JSONResponse({
+                "success": False,
+                "error": "У вас нет шаблонов расписания"
+            })
+
+        # Определяем диапазон дат: следующие 14 дней
+        start_date = date.today()
+        end_date = start_date + timedelta(days=14)
+
+        generated_count = 0
+        current_date = start_date
+
+        while current_date <= end_date:
+            # Получаем день недели (0 - понедельник, 6 - воскресенье)
+            day_of_week = current_date.weekday()
+
+            # Находим шаблоны для этого дня недели
+            day_templates = [t for t in templates if t.day_of_week == day_of_week]
+
+            for template in day_templates:
+                # Проверяем, существует ли уже урок на эту дату и номер урока
+                existing_lesson = db.query(Lesson).filter(
+                    Lesson.user_id == current_user.id,
+                    Lesson.date == current_date,
+                    Lesson.lesson_number == template.lesson_number
+                ).first()
+
+                if existing_lesson:
+                    # Обновляем существующий урок
+                    existing_lesson.subject_id = template.subject_id
+                    existing_lesson.start_time = template.start_time
+                    existing_lesson.end_time = template.end_time
+                    existing_lesson.room = template.room
+                else:
+                    # Создаем новый урок
+                    new_lesson = Lesson(
+                        user_id=current_user.id,
+                        subject_id=template.subject_id,
+                        date=current_date,
+                        lesson_number=template.lesson_number,
+                        start_time=template.start_time,
+                        end_time=template.end_time,
+                        room=template.room
+                    )
+                    db.add(new_lesson)
+                    generated_count += 1
+
+            current_date += timedelta(days=1)
+
+        db.commit()
+
+        return JSONResponse({
+            "success": True,
+            "generated": generated_count,
+            "message": f"Уроки успешно созданы на период с {start_date} по {end_date}"
+        })
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Ошибка при генерации уроков: {e}", exc_info=True)
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
 
 @router.post("/verify-2fa")
 @timing_safe_endpoint
