@@ -11,7 +11,7 @@
 <header>
     <nav>
         <a href="/" class="logo">
-            <span class="logo-text">📚 Дневник</span>
+            <span class="logo-text">Дневник</span>
         </a>
 
         <div class="desktop-nav">
@@ -31,11 +31,11 @@
 
         <div class="nav-right">
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
-                <span class="theme-icon">🌙</span>
+                <span class="theme-icon"><img src="{{ url_for('static', path='assets/bx-moon.svg') }}" class="invert"></span>
             </button>
 
             <div class="user-avatar" onclick="window.location.href='/profile'">
-                <span>👤</span>
+                <span><img src="{{ url_for('static', path='assets/bx-user.svg') }}" class="invert"></span>
             </div>
 
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Меню">
