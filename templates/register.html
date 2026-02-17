@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Регистрация{% endblock %}
-
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
+{% endblock %}
 {% block content %}
 <div class="form-container">
   <h2 class="login-header">Регистрация</h2>

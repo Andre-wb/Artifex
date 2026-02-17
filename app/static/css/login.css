@@ -1,0 +1,248 @@
+/* Стили для страницы входа */
+.form-container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-card, 24px);
+    box-shadow: var(--shadow-card, 0 20px 40px rgba(0,0,0,0.1));
+    border: 1px solid var(--border-card, rgba(255,255,255,0.2));
+}
+
+/* Заголовок */
+.login-header {
+    font-size: 32px;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: -0.02em;
+    margin-bottom: var(--spacing-xxxl, 30px);
+    color: var(--text-primary, #1e293b);
+    text-align: center;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Группа формы */
+.form-group {
+    margin-bottom: var(--spacing-xl, 20px);
+    position: relative;
+}
+
+/* Иконка в поле */
+.form-group span {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast, 0.2s);
+}
+
+.form-group span img {
+    width: 20px;
+    height: 20px;
+    filter: invert(0.3);
+}
+
+/* Поле ввода */
+.input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    font-size: 16px;
+    border: none;
+    background: var(--bg-lessons, #f8fafc);
+    border-radius: 14px;
+    transition: all var(--transition-fast, 0.2s);
+    color: var(--text-primary, #1e293b);
+    font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.input:focus {
+    outline: none;
+    background: var(--bg-lesson-hover, white);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+}
+
+.input::placeholder {
+    color: var(--text-secondary, #64748b);
+    font-weight: var(--font-weight-normal, 400);
+    opacity: 0.5;
+}
+
+/* Кнопка входа */
+.button-login {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: var(--font-weight-semibold, 600);
+    cursor: pointer;
+    transition: all var(--transition-default, 0.3s);
+    margin-top: var(--spacing-md, 12px);
+    letter-spacing: -0.01em;
+    box-shadow: var(--shadow-nav-arrow, 0 2px 8px rgba(0,0,0,0.1));
+}
+
+.button-login:hover {
+    transform: scale(1.01);
+    box-shadow: var(--shadow-card-hover, 0 30px 50px rgba(0,0,0,0.2));
+    filter: brightness(1.1);
+}
+
+.button-login:active {
+    transform: scale(0.99);
+}
+
+/* Ссылка регистрации */
+.register-text {
+    text-align: center;
+    margin-top: var(--spacing-xxl, 24px);
+    font-size: 15px;
+    color: var(--text-secondary, #64748b);
+}
+
+.register-link {
+    color: var(--primary-start, #667eea);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium, 500);
+    transition: color var(--transition-fast, 0.2s);
+    position: relative;
+}
+
+.register-link:hover {
+    color: var(--primary-end, #764ba2);
+    text-decoration: none;
+}
+
+.register-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    transition: width var(--transition-default, 0.3s);
+}
+
+.register-link:hover::after {
+    width: 100%;
+}
+
+/* Сообщения об ошибках */
+.error, .error-list {
+    color: var(--grade-bad-text, #920e0e);
+    font-size: 14px;
+    margin-top: var(--spacing-xs, 4px);
+    padding-left: var(--spacing-lg, 16px);
+    list-style: none;
+}
+
+.error-list li, .success-list li {
+    padding: var(--spacing-md, 12px) var(--spacing-lg, 16px);
+    border-radius: var(--border-radius-lesson, 12px);
+    margin: var(--spacing-sm, 8px) 0;
+}
+
+.error-list li {
+    background: var(--grade-bad-bg, #fb242b);
+    color: var(--grade-bad-text, #920e0e);
+    opacity: 0.9;
+}
+
+/* Сообщения об успехе */
+.success-list {
+    list-style: none;
+    margin-top: var(--spacing-lg, 16px);
+}
+
+.success-list li {
+    background: var(--grade-great-bg, #4ade80);
+    color: var(--grade-great-text, #166534);
+}
+
+/* Темная тема */
+[data-theme="dark"] .form-container {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--border-card, rgba(255,255,255,0.1));
+}
+
+[data-theme="dark"] .login-header {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-theme="dark"] .input {
+    background: var(--bg-lessons, #0f172a);
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .input::placeholder {
+    color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .form-group span img {
+    filter: invert(0.8);
+}
+
+[data-theme="dark"] .input:focus {
+    background: var(--bg-lesson-hover, #334155);
+    box-shadow: 0 0 0 4px rgba(76, 29, 149, 0.3);
+}
+
+[data-theme="dark"] .register-text {
+    color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .register-link {
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] .register-link:hover {
+    color: var(--primary-end, #2e1065);
+}
+
+[data-theme="dark"] .error-list li {
+    background: var(--grade-bad-bg, #ef4444);
+    color: var(--grade-bad-text, #7f1d1d);
+}
+
+[data-theme="dark"] .success-list li {
+    background: var(--grade-great-bg, #22c55e);
+    color: var(--grade-great-text, #14532d);
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+    .form-container {
+        margin: var(--spacing-xl, 20px) auto;
+        padding: var(--spacing-xxxl, 30px) var(--spacing-xl, 20px);
+    }
+
+    .login-header {
+        font-size: 28px;
+        margin-bottom: var(--spacing-xxl, 24px);
+    }
+
+    .input {
+        padding: 14px 14px 14px 44px;
+        font-size: 15px;
+    }
+
+    .button-login {
+        padding: 14px;
+        font-size: 16px;
+    }
+}
