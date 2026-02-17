@@ -277,6 +277,7 @@ class WAFEngine:
             - max_content_length: макс. размер тела запроса (байт)
             - whitelist_ips: список IP для белого списка
         """
+        self.config = config or {}
         self.safe_params = set(self.config.get('safe_params', ['csrf_token', '_csrf', 'csrfmiddlewaretoken']))
         self.config = config or {}
         self.rules = WAFSignature.get_all_rules()
