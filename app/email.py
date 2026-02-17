@@ -1,28 +1,23 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, Form, Response
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, bindparam  # <-- добавлен импорт bindparam
-from typing import Optional
-from sqlalchemy.exc import IntegrityError
-import re
-import logging
 import smtplib
-from datetime import datetime, timedelta
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import time
+from fastapi import Request
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import os
+import re
 
 from .config import Config
 
 logger = logging.getLogger(__name__)
+
+# Сериализатор для подтверждения email
 JWT_SECRET = os.getenv('SECRET_KEY')
 serializer = URLSafeTimedSerializer(JWT_SECRET)
 
 # Флаг production (для безопасных cookie)
 is_production = Config.ENVIRONMENT == 'production'
+
 
 def generate_confirmation_token(email: str) -> str:
     """
@@ -114,6 +109,7 @@ def extract_form_data(form_data, fields: list) -> dict:
 
     return result
 
+
 async def send_confirmation_email(user_email: str, token: str, request: Request) -> bool:
     """
     Отправляет письмо с подтверждением email.
@@ -136,6 +132,30 @@ async def send_confirmation_email(user_email: str, token: str, request: Request)
       <p>Если вы не регистрировались, проигнорируйте это письмо.</p>
     </body></html>
     """
+    msg.attach(MIMEText(html_content, 'html'))
+
+    try:
+        with smtplib.SMTP(smtp_config['SMTP_SERVER'], smtp_config['SMTP_PORT']) as server:
+            server.starttls()
+            server.login(smtp_config['SMTP_USERNAME'], smtp_config['SMTP_PASSWORD'])
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка отправки email: {e}")
+        return False
+
+
+async def send_email(recipient: str, subject: str, html_content: str) -> bool:
+    """
+    Универсальная функция отправки email через SMTP.
+    Используется для двухфакторной аутентификации и других уведомлений.
+    Возвращает True, если отправка успешна.
+    """
+    smtp_config = Config.get_smtp_config()
+    msg = MIMEMultipart()
+    msg['From'] = smtp_config['SMTP_USERNAME']
+    msg['To'] = recipient
+    msg['Subject'] = subject
     msg.attach(MIMEText(html_content, 'html'))
 
     try:

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Подтверждение входа{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <h2>Подтверждение входа</h2>
+  <p>На ваш email <strong>{{ email }}</strong> отправлен код подтверждения. Введите его ниже.</p>
+
+  <form method="POST" action="/verify-2fa">
+    <div class="form-group">
+      <label for="code">Код подтверждения</label>
+      <input type="text" id="code" name="code" class="input" required pattern="\d{6}" maxlength="6" autocomplete="off">
+    </div>
+
+    <button type="submit" class="button-login">Подтвердить</button>
+  </form>
+
+  <p class="register-text">
+    Не получили код? <a href="#" onclick="resendCode()">Отправить снова</a>
+  </p>
+</div>
+
+<script>
+  function resendCode() {
+    fetch('/resend-2fa', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert('Новый код отправлен на ваш email');
+              } else {
+                alert('Ошибка: ' + data.error);
+              }
+            });
+  }
+</script>
+{% endblock %}
