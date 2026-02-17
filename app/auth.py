@@ -47,22 +47,13 @@ class JWTKeyManager:
     """
 
     def __init__(self):
-        # _current_keys: словарь {kid: {private_key, public_key, created_at}} для активного ключа (одного или нескольких, но обычно один)
         self._current_keys = {}
-        # _previous_keys: словарь для ключей, которые были текущими ранее, но уже заменены (хранятся для проверки старых токенов)
         self._previous_keys = {}
-        # идентификатор текущего активного ключа
         self._current_kid = None
-        # блокировка для потокобезопасного доступа к внутренним структурам
         self._lock = threading.RLock()
-        # интервал ротации ключа в секундах (по умолчанию 24 часа)
         self._key_rotation_interval = 86400       # 24 часа
-        # максимальное время жизни ключа (7 дней) — после этого ключ удаляется из previous
         self._max_key_age = 7 * 86400              # 7 дней
-        # флаг инициализации (загружены ли ключи)
         self._initialized = False
-
-        # Пути к файлам ключей (можно задать в конфиге)
         self.private_key_path = getattr(Config, 'PRIVATE_KEY_PATH', 'keys/private.pem')
         self.public_key_path = getattr(Config, 'PUBLIC_KEY_PATH', 'keys/public.pem')
 
@@ -276,10 +267,6 @@ def validate_jwt_claims(payload: Dict[str, Any], token_type: str, required_scope
         logger.warning(f"Missing required claims: {missing_claims}")
         return False
 
-    print("🔍 VALIDATE CLAIMS PAYLOAD:", payload)
-
-    logger.info(f"validate_jwt_claims called with payload keys: {list(payload.keys())}")
-
     # Проверка типа токена
     if payload.get("typ") != token_type:
         logger.warning(f"Invalid token type. Expected: {token_type}, Got: {payload.get('typ')}")
@@ -289,8 +276,6 @@ def validate_jwt_claims(payload: Dict[str, Any], token_type: str, required_scope
     if payload.get("iss") != JWT_ISSUER:
         logger.warning(f"Invalid issuer. Expected: {JWT_ISSUER}, Got: {payload.get('iss')}")
         return False
-
-    logger.info(f"validate_jwt_claims: full payload = {payload}")
 
     # Проверка аудитории (может быть строкой или списком)
     audiences = payload.get("aud", [])
@@ -371,8 +356,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         "kid": key_manager.get_current_kid()  # идентификатор ключа, которым подписан токен
     })
 
-    print("🔍 TO_ENCODE before encode:", to_encode)
-
     try:
         private_key = key_manager.get_private_key()
         if not private_key:
@@ -384,15 +367,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         raise HTTPException(status_code=500, detail="Token creation failed")
 
 
-def create_refresh_token(user_id: int, db: Session) -> tuple[str, datetime]:
-    """Создаёт refresh token для пользователя.
-    Сначала удаляет все просроченные refresh токены этого пользователя из БД.
-    Генерирует случайный refresh_token (строка), сохраняет его хеш в таблицу RefreshToken вместе с датой истечения.
-    Затем создаёт JWT refresh token, который содержит ссылку на запись в БД (rti).
-    Возвращает кортеж (refresh_token_jwt, expires_at).
-    В случае ошибки подписи JWT возвращает простой токен (без JWT) как fallback.
+def create_refresh_token(user_id: int, db: Session, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> tuple[str, datetime]:
     """
-    # Удаляем старые просроченные токены (чистка)
+    Создаёт refresh token для пользователя.
+    Удаляет просроченные токены, создаёт новый, сохраняет IP и User-Agent.
+    Возвращает (refresh_token_jwt, expires_at).
+    """
+    # Удаляет старые просроченные токены
     db.query(RefreshToken).filter(
         RefreshToken.user_id == user_id,
         RefreshToken.expires_at < datetime.now(timezone.utc)
@@ -408,14 +389,14 @@ def create_refresh_token(user_id: int, db: Session) -> tuple[str, datetime]:
         token_hash=hash_token(refresh_token),
         expires_at=expires_at,
         created_at=datetime.now(timezone.utc),
-        user_agent=None,
-        ip_address=None
+        ip_address=ip_address,
+        user_agent=user_agent
     )
     db.add(db_refresh_token)
     db.commit()
     db.refresh(db_refresh_token)
 
-    # Формируем полезную нагрузку для JWT refresh токена
+    # Формирует полезную нагрузку для JWT refresh токена
     refresh_payload = {
         "sub": str(user_id),
         "exp": expires_at,
@@ -424,7 +405,7 @@ def create_refresh_token(user_id: int, db: Session) -> tuple[str, datetime]:
         "aud": JWT_AUDIENCE,
         "typ": "refresh",
         "jti": secrets.token_hex(16),
-        "rti": db_refresh_token.id,            # идентификатор записи в БД (Refresh Token ID)
+        "rti": db_refresh_token.id,
         "kid": key_manager.get_current_kid()
     }
 
@@ -435,7 +416,7 @@ def create_refresh_token(user_id: int, db: Session) -> tuple[str, datetime]:
         encoded_refresh = jwt.encode(refresh_payload, private_key, algorithm="RS256")
     except Exception as e:
         logger.error(f"Error creating refresh JWT: {e}")
-        encoded_refresh = refresh_token   # fallback: возвращаем сам токен без JWT-обёртки
+        encoded_refresh = refresh_token
 
     return encoded_refresh, expires_at
 
@@ -486,9 +467,6 @@ def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
             if not public_key:
                 raise ValueError(f"No public key for kid {token_kid}")
 
-            # Логируем попытку
-            logger.info(f"decode_token attempt {attempt+1}, kid: {token_kid}")
-
             # Декодируем и проверяем подпись
             # Важно: не передаём параметр audience, чтобы библиотека не проверяла его автоматически
             payload = jwt.decode(
@@ -502,10 +480,8 @@ def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
                     "verify_aud": False,
                     "require": ["exp", "iat", "iss", "aud", "sub", "typ", "jti"] if verify else []
                 },
-                leeway=30  # допуск 30 секунд на рассинхронизацию часов
+                leeway=30
             )
-
-            logger.info(f"decode_token: payload = {payload}")
 
             # Если требуется полная проверка, выполняем дополнительную валидацию claims
             if verify and not validate_jwt_claims(payload, token_type, required_scopes):
@@ -579,12 +555,12 @@ def validate_token_structure(token: str) -> bool:
 # Работа с refresh токенами
 # -------------------------------------------------------------------
 
-def verify_refresh_token(refresh_token: str, db: Session) -> User:
-    """Проверяет валидность refresh токена.
-    Сначала пытается декодировать его как JWT и сверить с записью в БД по rti.
-    Если не удаётся (старый формат или ошибка), пробует найти токен по хешу в БД (fallback).
-    Возвращает объект User, если токен корректен и не отозван.
-    В противном случае выбрасывает HTTPException.
+def verify_refresh_token(refresh_token: str, db: Session, current_ip: Optional[str] = None, current_ua: Optional[str] = None) -> tuple[User, str, datetime]:
+    """
+    Проверяет валидность refresh токена.
+    При успехе создаёт НОВЫЙ refresh токен (ротация), отзывает старый.
+    Возвращает (user, new_refresh_token, new_expires_at).
+    При подозрительной активности (смена IP/User-Agent) логирует предупреждение.
     """
     try:
         # Пытаемся декодировать как JWT refresh токен
@@ -602,14 +578,40 @@ def verify_refresh_token(refresh_token: str, db: Session) -> User:
         if not db_token:
             raise HTTPException(status_code=401, detail="Token revoked")
 
-        # Проверяем срок действия по БД (на всякий случай, хотя exp уже проверено в JWT)
+        # Проверяем срок действия по БД
         if db_token.expires_at < datetime.now(timezone.utc):
             db.delete(db_token)
             db.commit()
             raise HTTPException(status_code=401, detail="Refresh token expired")
 
+        # Проверка на подозрительную активность (смена IP или User-Agent)
+        if current_ip and db_token.ip_address and current_ip != db_token.ip_address:
+            logger.warning(f"Suspicious activity: IP changed for user {user_id}. Old: {db_token.ip_address}, New: {current_ip}")
+            # Здесь можно предпринять дополнительные меры, например, отправить уведомление пользователю
+            # Но мы не блокируем, только логируем
+
+        if current_ua and db_token.user_agent and current_ua != db_token.user_agent:
+            logger.warning(f"Suspicious activity: User-Agent changed for user {user_id}. Old: {db_token.user_agent}, New: {current_ua}")
+
+        # Ротация: создаём новый refresh токен
+        new_refresh_token, new_expires_at = create_refresh_token(
+            user_id, db,
+            ip_address=current_ip,
+            user_agent=current_ua
+        )
+
+        # Отзываем старый токен
+        db_token.revoked_at = datetime.now(timezone.utc)
+        db.commit()
+
+        # Получаем пользователя
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user, new_refresh_token, new_expires_at
+
     except (HTTPException, jwt.InvalidTokenError, ValueError):
-        # Fallback для старых токенов (которые не были JWT, а просто случайной строкой)
         token_hash = hash_token(refresh_token)
         db_token = db.query(RefreshToken).filter(
             RefreshToken.token_hash == token_hash,
@@ -626,12 +628,28 @@ def verify_refresh_token(refresh_token: str, db: Session) -> User:
             db.commit()
             raise HTTPException(status_code=401, detail="Refresh token expired")
 
-    # Получаем пользователя по user_id
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Аналогичная проверка подозрительной активности
+        if current_ip and db_token.ip_address and current_ip != db_token.ip_address:
+            logger.warning(f"Suspicious activity: IP changed for user {user_id}. Old: {db_token.ip_address}, New: {current_ip}")
 
-    return user
+        if current_ua and db_token.user_agent and current_ua != db_token.user_agent:
+            logger.warning(f"Suspicious activity: User-Agent changed for user {user_id}. Old: {db_token.user_agent}, New: {current_ua}")
+
+        # Ротация
+        new_refresh_token, new_expires_at = create_refresh_token(
+            user_id, db,
+            ip_address=current_ip,
+            user_agent=current_ua
+        )
+
+        db_token.revoked_at = datetime.now(timezone.utc)
+        db.commit()
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user, new_refresh_token, new_expires_at
 
 
 def revoke_refresh_token(token_id: int, db: Session):
@@ -658,8 +676,6 @@ def revoke_all_user_refresh_tokens(user_id: int, db: Session):
 # Зависимости FastAPI
 # -------------------------------------------------------------------
 
-from fastapi import Request  # Добавьте этот импорт в начало файла
-
 async def get_current_user(
         request: Request,
         db: Session = Depends(get_db)
@@ -670,7 +686,6 @@ async def get_current_user(
         # Если токен пришёл как байты, преобразуем в строку
         if isinstance(token, bytes):
             token = token.decode('utf-8')
-            logger.info(f"get_current_user: token decoded from bytes")
 
         if not token:
             logger.warning("No access token in cookies")
@@ -682,9 +697,6 @@ async def get_current_user(
         # Это может случиться, если cookie была установлена как repr(bytes)
         if token.startswith("b'") and token.endswith("'"):
             token = token[2:-1]
-            logger.info("get_current_user: stripped b' literal from token")
-
-        logger.info(f"Token from cookie (first 50 chars): {token[:50]}...")
 
         payload = decode_token_with_key_rotation(token, token_type="access", verify=True)
 

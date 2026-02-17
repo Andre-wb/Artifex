@@ -367,26 +367,21 @@ async def refresh_token(
         request: Request,
         db: Session = Depends(get_db)
 ):
-    """
-    Обрабатывает POST-запрос на обновление access-токена с использованием refresh-токена.
-    Проверяет наличие refresh-токена в cookies, валидирует его и возвращает новый access-токен.
-
-    Аргументы:
-        request (Request): объект запроса FastAPI.
-        db (Session): сессия базы данных (зависимость).
-
-    Возвращает:
-        JSONResponse: ответ с новым access-токеном и информацией об успехе,
-                      либо ошибкой с соответствующим статус-кодом.
-    """
-    refresh_token = request.cookies.get("refresh_token")
-
-    if not refresh_token:
+    refresh_token_cookie = request.cookies.get("refresh_token")
+    if not refresh_token_cookie:
         raise HTTPException(status_code=401, detail="No refresh token")
 
     try:
-        user = verify_refresh_token(refresh_token, db)
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
 
+        user, new_refresh_token, new_expires_at = verify_refresh_token(
+            refresh_token_cookie, db,
+            current_ip=client_ip,
+            current_ua=user_agent
+        )
+
+        # Создаём новый access токен
         new_access_token = create_access_token(data={"sub": str(user.id)})
 
         response = JSONResponse({
@@ -395,7 +390,10 @@ async def refresh_token(
             "expires_in": 900
         })
 
+        # Устанавливаем новые cookies
         create_secure_cookie(response, "access_token", new_access_token, 15*60)
+        create_secure_cookie(response, "refresh_token", new_refresh_token, 180*24*3600)
+
         return response
 
     except HTTPException as e:
@@ -460,8 +458,6 @@ async def login_page(request: Request):
     request.state.csrf_token = cookie_token
     request.state._csrf_cookie_token = cookie_token
 
-    logger.debug(f"GET /login: Сгенерированы токены. Cookie: {cookie_token[:10]}..., Form: {form_token[:20]}...")
-
     response = request.app.state.templates.TemplateResponse(
         "login.html",
         {
@@ -509,6 +505,7 @@ async def login(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Поиск пользователя по email, телефону или имени пользователя
         user = db.query(User).filter(
             or_(
                 User.email == bindparam('cred'),
@@ -517,75 +514,86 @@ async def login(
             )
         ).params(cred=credential).first()
 
+        # Проверка блокировки аккаунта
         if user and user.locked_until and user.locked_until > datetime.utcnow():
             _ = user.check_password(password)
             logger.warning(f"Попытка входа в заблокированный аккаунт: {credential}")
 
             new_cookie_token, new_form_token = generate_double_csrf_token()
-
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Аккаунт временно заблокирован. Попробуйте позже.",
                 "credential": credential,
                 "csrf_token": new_form_token
             })
-
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка пароля
         if user and user.check_password(password):
+            # Сброс счётчика неудачных попыток
             if user.failed_login_attempts > 0:
                 user.failed_login_attempts = 0
                 user.locked_until = None
                 db.commit()
 
+            # Проверка подтверждения email
             if not user.confirmed:
                 logger.warning(f"Попытка входа без подтверждения email: {credential}")
 
                 new_cookie_token, new_form_token = generate_double_csrf_token()
-
                 response = request.app.state.templates.TemplateResponse("login.html", {
                     "request": request,
                     "error": "Подтвердите ваш Email. Проверьте почту.",
                     "credential": credential,
                     "csrf_token": new_form_token
                 })
-
                 create_csrf_cookie(response, new_cookie_token)
                 return response
 
-            access_token = create_access_token(data={"sub": str(user.id)})
-            refresh_token, refresh_expires = create_refresh_token(user.id, db)
+            # Получаем IP и User-Agent из запроса
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
 
+            # Создаём токены
+            access_token = create_access_token(data={"sub": str(user.id)})
+            refresh_token, refresh_expires = create_refresh_token(
+                user.id,
+                db,
+                ip_address=client_ip,
+                user_agent=user_agent
+            )
+
+            # Формируем ответ-редирект на профиль
             response = RedirectResponse("/profile", status_code=303)
 
-            create_secure_cookie(response, "access_token", access_token, 15*60)
-            create_secure_cookie(response, "refresh_token", refresh_token, 180*24*3600)
+            # Устанавливаем безопасные cookies
+            create_secure_cookie(response, "access_token", access_token, 15 * 60)
+            create_secure_cookie(response, "refresh_token", refresh_token, 180 * 24 * 3600)
 
+            # Обновляем CSRF-токен
             new_cookie_token, new_form_token = generate_double_csrf_token()
             create_csrf_cookie(response, new_cookie_token)
 
             logger.info(f"Успешный вход пользователя: {user.username} (ID: {user.id})")
             return response
+
         else:
+            # Неудачная попытка входа
             if user:
                 user.failed_login_attempts += 1
-
                 if user.failed_login_attempts >= 5:
                     user.locked_until = datetime.utcnow() + timedelta(minutes=30)
                     logger.warning(f"Аккаунт {user.username} заблокирован до {user.locked_until}")
-
                 db.commit()
 
             new_cookie_token, new_form_token = generate_double_csrf_token()
-
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Неверные email, телефон, имя пользователя или пароль",
                 "credential": credential,
                 "csrf_token": new_form_token
             })
-
             create_csrf_cookie(response, new_cookie_token)
             return response
 
@@ -593,7 +601,6 @@ async def login(
         logger.error(f"Ошибка при входе: {str(e)}", exc_info=True)
 
         new_cookie_token, new_form_token = generate_double_csrf_token()
-
         response = request.app.state.templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.",
