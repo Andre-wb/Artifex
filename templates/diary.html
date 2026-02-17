@@ -11,14 +11,6 @@
   <div class="current-date-info">
     <span class="current-date">Сегодня: {{ today.strftime('%d %B %Y') }}</span>
   </div>
-
-  <button class="generate-btn" onclick="generateLessonsFromTemplate()">
-    🔄 Создать уроки на 2 недели вперед из шаблона
-  </button>
-</div>
-
-<div class="current-date-info">
-  <span class="current-date">Сегодня: {{ today.strftime('%d %B %Y') }}</span>
 </div>
 
 <div class="days-carousel">
@@ -80,9 +72,10 @@
 <div class="carousel-nav">
   <button class="nav-arrow prev" onclick="scrollCarousel(-400)">←</button>
   <button class="nav-arrow next" onclick="scrollCarousel(400)">→</button>
-  <button class="nav-arrow" onclick="document.querySelector('.today').scrollIntoView({behavior: 'smooth', block: 'center'})">
-    📍
-  </button>
+<!--  Кнопка работает неисправно, позже нужно пофиксить
+      <button class="nav-arrow" onclick="document.querySelector('.today').scrollIntoView({behavior: 'smooth', block: 'center'})">-->
+<!--    📍-->
+<!--  </button>-->
 </div>
 
 <div id="lessonModal" class="modal">
