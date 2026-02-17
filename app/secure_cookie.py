@@ -39,8 +39,6 @@ def create_secure_cookie(response: Response, name: str, value: str, max_age: int
         # В production установятся флаги: HttpOnly, Secure, SameSite=Lax
     """
 
-    logger.info(f"Setting cookie {name} with secure={is_production}, samesite={'Lax' if is_production else 'None'}")
-
     response.set_cookie(
         key=name,
         value=value,

@@ -29,7 +29,6 @@ class User(Base):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    # Связи
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     lessons = relationship("Lesson", back_populates="user", cascade="all, delete-orphan")
     grades = relationship("Grade", back_populates="user", cascade="all, delete-orphan")
