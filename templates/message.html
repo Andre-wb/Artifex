@@ -2,12 +2,14 @@
 {% extends "base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
-
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/login.css') }}">
+{% endblock %}
 {% block content %}
-<div style="text-align: center; padding: 50px; max-width: 600px; margin: 0 auto;">
-  <h1>{{ title }}</h1>
-  <div style="background: #f8f9fa; border-radius: 15px; padding: 30px; margin: 20px 0;">
-    <p style="font-size: 1.2em; line-height: 1.6;">{{ message|safe }}</p>
+<div class=form-container>
+  <h1 class="login-header">{{ title }}</h1>
+  <div>
+    <p>{{ message|safe }}</p>
   </div>
   <div style="margin-top: 30px;">
     <a href="/">На главную</a>
