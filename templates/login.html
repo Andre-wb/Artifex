@@ -8,19 +8,21 @@
   <form method="POST" novalidate>
 
     <div class="form-group">
-      <label for="credential">Email, телефон или имя пользователя</label>
+        <span><img src="{{ url_for('static', path='assets/bx-envelope.svg') }}"></span>
       <input type="text" id="credential" name="credential" class="input"
              autocomplete="username" required
-             value="{{ credential if credential else '' }}">
+             value="{{ credential if credential else '' }}"
+             placeholder="Email, телефон или имя пользователя">
       {% if error and error.credential %}
       <span class="error">{{ error.credential }}</span>
       {% endif %}
     </div>
 
     <div class="form-group">
-      <label for="password">Пароль</label>
+        <span><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}"></span>
       <input type="password" id="password" name="password" class="input"
-             autocomplete="current-password" required>
+             autocomplete="current-password" required
+             placeholder="Пароль">
       {% if error and error.password %}
       <span class="error">{{ error.password }}</span>
       {% endif %}
@@ -46,8 +48,7 @@
   {% endif %}
 
   <p class="register-text">
-    Ещё нет аккаунта?
-    <a href="/register" class="register-link">Зарегистрироваться</a>
+    <a href="/register" class="register-link">Ещё нет аккаунта? Зарегистрироваться</a>
   </p>
 </div>
 
