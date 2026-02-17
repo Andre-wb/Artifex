@@ -6,6 +6,7 @@ from sqlalchemy import and_, func
 from datetime import date, timedelta, datetime
 from typing import Optional, List
 import calendar
+from .auth import get_current_user, get_current_user_optional
 
 from .database import get_db
 from .models import User, Subject, Lesson, Grade, TimetableTemplate
