@@ -1264,7 +1264,7 @@ class WAFRequestBodyMiddleware(BaseHTTPMiddleware):
                         'more_body': False
                     }
 
-                original_receive = request.receive
+                original_receive = request._receive
 
                 async def new_receive():
                     if not hasattr(request, '_body_read'):
@@ -1272,7 +1272,7 @@ class WAFRequestBodyMiddleware(BaseHTTPMiddleware):
                         return await receive_body()
                     return await original_receive()
 
-                request.receive = new_receive
+                request._receive = new_receive
 
             except Exception as e:
                 logger.error(f"Ошибка анализа тела запроса: {e}")
