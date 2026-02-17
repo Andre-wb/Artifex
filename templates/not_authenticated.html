@@ -1,15 +1,26 @@
-
 {% extends "base.html" %}
 
 {% block title %}Требуется авторизация{% endblock %}
-
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/nonauth_and_error.css') }}">
+{% endblock %}
 {% block content %}
-<div style="text-align: center; padding: 50px;">
-  <h1><img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" class="invert"> Требуется авторизация</h1>
-  <p style="color: var(--text-white);">Для доступа к этой странице необходимо войти в систему.</p>
-  <div style="margin-top: 30px;">
-    <a href="/login">Войти</a>
-    <a href="/register">Зарегистрироваться</a>
+<div class="auth-required-container">
+  <div class="auth-content">
+    <div class="lock-icon">
+      <img src="{{ url_for('static', path='assets/bx-lock-alt.svg') }}" alt="Замок">
+    </div>
+
+    <h1 class="auth-title">Требуется авторизация</h1>
+
+    <p class="auth-description">
+      Для доступа к этой странице необходимо войти в систему
+    </p>
+
+    <div class="auth-buttons">
+      <a href="/login" class="auth-button primary">Войти</a>
+      <a href="/register" class="auth-button secondary">Зарегистрироваться</a>
+    </div>
   </div>
 </div>
 {% endblock %}
