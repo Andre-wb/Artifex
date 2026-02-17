@@ -31,8 +31,8 @@
                     {% endif %}
                 </div>
                 <div class="lesson-actions">
-                    <button onclick="editTemplate({{ template.id }})">✏️</button>
-                    <button onclick="deleteTemplate({{ template.id }})">🗑️</button>
+                    <button onclick="editTemplate({{ template.id }})" class="edit-btn" title="Редактировать">✏️</button>
+                    <button onclick="deleteTemplate({{ template.id }})" class="delete-btn" title="Удалить">🗑️</button>
                 </div>
             </div>
             {% endfor %}
@@ -45,6 +45,7 @@
     {% endfor %}
 </div>
 
+<!-- Модальное окно для добавления/редактирования урока -->
 <div id="templateModal" class="modal">
     <div class="modal-content">
         <h2 id="modalTitle">Добавить урок в шаблон</h2>
@@ -52,14 +53,20 @@
             <input type="hidden" id="templateId" name="templateId">
             <input type="hidden" id="templateDay" name="day_of_week">
 
-            <div class="form-group">
+            <!-- Поле выбора предмета с кнопкой добавления -->
+            <div class="form-group subject-group">
                 <label for="templateSubject">Предмет *</label>
-                <select id="templateSubject" name="subject_id" required>
-                    <option value="">Выберите предмет</option>
-                    {% for subject in subjects %}
-                    <option value="{{ subject.id }}">{{ subject.name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="subject-select-wrapper">
+                    <select id="templateSubject" name="subject_id" required>
+                        <option value="">Выберите предмет</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="add-subject-btn" onclick="showNewSubjectModal()" title="Добавить новый предмет">
+                        <span class="plus-icon">+</span>
+                    </button>
+                </div>
             </div>
 
             <div class="form-group">
@@ -67,19 +74,21 @@
                 <input type="number" id="templateLessonNumber" name="lesson_number" min="1" max="8" required>
             </div>
 
-            <div class="form-group">
-                <label for="templateStartTime">Время начала</label>
-                <input type="time" id="templateStartTime" name="start_time">
-            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="templateStartTime">Время начала</label>
+                    <input type="time" id="templateStartTime" name="start_time">
+                </div>
 
-            <div class="form-group">
-                <label for="templateEndTime">Время окончания</label>
-                <input type="time" id="templateEndTime" name="end_time">
+                <div class="form-group">
+                    <label for="templateEndTime">Время окончания</label>
+                    <input type="time" id="templateEndTime" name="end_time">
+                </div>
             </div>
 
             <div class="form-group">
                 <label for="templateRoom">Кабинет</label>
-                <input type="text" id="templateRoom" name="room">
+                <input type="text" id="templateRoom" name="room" placeholder="Например: 301">
             </div>
 
             <div class="modal-buttons">
@@ -90,5 +99,44 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', path='js/add_lesson.js') }}"></script>
+<!-- Модальное окно для добавления нового предмета -->
+<div id="newSubjectModal" class="modal">
+    <div class="modal-content small-modal">
+        <h2>➕ Новый предмет</h2>
+        <form id="newSubjectForm" onsubmit="createNewSubject(event)">
+            <div class="form-group">
+                <label for="newSubjectName">Название предмета *</label>
+                <input type="text" id="newSubjectName" name="name" required
+                       placeholder="Например: Алгебра, Физика, История"
+                       maxlength="50">
+            </div>
+
+            <div class="form-group">
+                <label for="newSubjectDescription">Описание (необязательно)</label>
+                <textarea id="newSubjectDescription" name="description"
+                          rows="3" placeholder="Краткое описание предмета" style="resize: none"></textarea>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="submit" class="btn btn-primary">Создать предмет</button>
+                <button type="button" class="btn btn-secondary" onclick="closeNewSubjectModal()">Отмена</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Подтверждение удаления -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content small-modal">
+        <h2>⚠️ Подтверждение</h2>
+        <p id="confirmMessage">Вы уверены, что хотите удалить этот урок?</p>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+            <button class="btn btn-secondary" onclick="closeConfirmModal()">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', path='css/templates.css') }}"></script>
+
 {% endblock %}

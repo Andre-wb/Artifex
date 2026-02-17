@@ -3,14 +3,14 @@
 {% block title %}Шаблон расписания{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/templates.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/templates.css') }}">
 {% endblock %}
 
 {% block content %}
 <h1>📅 Шаблон расписания</h1>
 
 <div class="templates-container">
-  <button class="generate-btn" onclick="generateLessons()">
+  <button onclick="generateLessons()">
     🔄 Создать уроки на 2 недели вперед из шаблона
   </button>
 
@@ -90,5 +90,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/add_lesson.js') }}"></script>
+<script src="{{ url_for('static', path='js/add_lesson.js') }}"></script>
 {% endblock %}

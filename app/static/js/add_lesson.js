@@ -1,26 +1,38 @@
-let currentEditTemplateId = null;
+// Состояние модальных окон
+let currentDeleteId = null;
 
-function showAddTemplateModal(day) {
-    document.getElementById('modalTitle').textContent = 'Добавить урок в шаблон';
+// Функции для основного модального окна
+function showAddTemplateModal(dayIndex) {
     document.getElementById('templateId').value = '';
-    document.getElementById('templateDay').value = day;
+    document.getElementById('templateDay').value = dayIndex;
+    document.getElementById('modalTitle').textContent = 'Добавить урок в шаблон';
     document.getElementById('templateForm').reset();
     document.getElementById('templateModal').style.display = 'flex';
 }
 
-function editTemplate(templateId) {
-    fetch(`/diary/api/timetable-template/${templateId}`)
-        .then(response => response.json())
-        .then(template => {
-            document.getElementById('modalTitle').textContent = 'Редактировать урок в шаблоне';
-            document.getElementById('templateId').value = template.id;
-            document.getElementById('templateDay').value = template.day_of_week;
-            document.getElementById('templateSubject').value = template.subject_id;
-            document.getElementById('templateLessonNumber').value = template.lesson_number;
-            document.getElementById('templateStartTime').value = template.start_time || '';
-            document.getElementById('templateEndTime').value = template.end_time || '';
-            document.getElementById('templateRoom').value = template.room || '';
+function editTemplate(id) {
+    // Используем существующий API эндпоинт для получения урока
+    fetch(`/diary/api/lessons/${id}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка загрузки');
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('templateId').value = data.id;
+            document.getElementById('templateDay').value = new Date(data.date).getDay() || 0;
+            document.getElementById('templateSubject').value = data.subject_id;
+            document.getElementById('templateLessonNumber').value = data.lesson_number;
+            document.getElementById('templateStartTime').value = data.start_time || '';
+            document.getElementById('templateEndTime').value = data.end_time || '';
+            document.getElementById('templateRoom').value = data.room || '';
+            document.getElementById('modalTitle').textContent = 'Редактировать урок';
             document.getElementById('templateModal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Ошибка при загрузке данных урока', 'error');
         });
 }
 
@@ -28,63 +40,222 @@ function closeModal() {
     document.getElementById('templateModal').style.display = 'none';
 }
 
-document.getElementById('templateForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+// Функции для модального окна нового предмета
+function showNewSubjectModal() {
+    document.getElementById('newSubjectForm').reset();
+    document.getElementById('newSubjectModal').style.display = 'flex';
+}
 
-    const templateId = document.getElementById('templateId').value;
+function closeNewSubjectModal() {
+    document.getElementById('newSubjectModal').style.display = 'none';
+}
+
+// Создание нового предмета
+function createNewSubject(event) {
+    event.preventDefault();
+
     const formData = {
-        day_of_week: parseInt(document.getElementById('templateDay').value),
-        lesson_number: parseInt(document.getElementById('templateLessonNumber').value),
-        subject_id: parseInt(document.getElementById('templateSubject').value),
-        start_time: document.getElementById('templateStartTime').value || null,
-        end_time: document.getElementById('templateEndTime').value || null,
-        room: document.getElementById('templateRoom').value || null
+        name: document.getElementById('newSubjectName').value,
+        description: document.getElementById('newSubjectDescription').value
     };
 
-    const url = templateId ? `/diary/api/timetable-template/${templateId}` : '/diary/api/timetable-template';
-    const method = templateId ? 'PUT' : 'POST';
-
-    fetch(url, {
-        method: method,
+    // Используем существующий API эндпоинт для создания предмета
+    fetch('/diary/api/subjects', {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData)
     })
         .then(response => {
-            if (response.ok) {
-                closeModal();
-                location.reload();
-            } else {
-                alert('Ошибка при сохранении');
+            if (!response.ok) {
+                throw new Error('Ошибка создания');
             }
-        });
-});
+            return response.json();
+        })
+        .then(data => {
+            // Добавляем новый предмет в выпадающий список
+            const select = document.getElementById('templateSubject');
+            const option = document.createElement('option');
+            option.value = data.id;
+            option.textContent = data.name;
+            select.appendChild(option);
 
-function deleteTemplate(templateId) {
-    if (confirm('Удалить этот урок из шаблона?')) {
-        fetch(`/diary/api/timetable-template/${templateId}`, {
+            // Выбираем новый предмет
+            select.value = data.id;
+
+            // Закрываем модальное окно
+            closeNewSubjectModal();
+
+            // Показываем уведомление
+            showNotification('Предмет успешно создан', 'success');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Ошибка при создании предмета', 'error');
+        });
+}
+
+// Функции для подтверждения удаления
+function deleteTemplate(id) {
+    currentDeleteId = id;
+    document.getElementById('confirmMessage').textContent = 'Вы уверены, что хотите удалить этот урок из шаблона?';
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+    currentDeleteId = null;
+}
+
+function confirmDelete() {
+    if (currentDeleteId) {
+        // Используем существующий API эндпоинт для удаления урока
+        fetch(`/diary/api/lessons/${currentDeleteId}`, {
             method: 'DELETE'
         })
             .then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Ошибка при удалении');
+                if (!response.ok) {
+                    throw new Error('Ошибка удаления');
                 }
+                // Удаляем элемент из DOM
+                const element = document.querySelector(`[data-template-id="${currentDeleteId}"]`);
+                if (element) {
+                    element.remove();
+                }
+                closeConfirmModal();
+                showNotification('Урок успешно удален', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Ошибка при удалении', 'error');
+                closeConfirmModal();
             });
     }
 }
 
+// Функция генерации уроков
 function generateLessons() {
-    if (confirm('Создать уроки на 2 недели вперед из шаблона?')) {
-        fetch('/diary/api/generate-lessons', {
+    if (confirm('Создать уроки на 2 недели вперед из текущего шаблона?')) {
+        // Используем существующий API эндпоинт для генерации
+        fetch('/diary/api/generate-lessons?weeks_ahead=2', {
             method: 'POST'
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка генерации');
+                }
+                return response.json();
+            })
             .then(data => {
-                alert(data.message);
-                window.location.href = '/diary';
+                showNotification('Уроки успешно созданы!', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Ошибка при создании уроков', 'error');
             });
     }
 }
+
+// Обработка отправки формы шаблона
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = {
+        day_of_week: parseInt(document.getElementById('templateDay').value),
+        subject_id: parseInt(document.getElementById('templateSubject').value),
+        lesson_number: parseInt(document.getElementById('templateLessonNumber').value),
+        start_time: document.getElementById('templateStartTime').value || null,
+        end_time: document.getElementById('templateEndTime').value || null,
+        room: document.getElementById('templateRoom').value || null
+    };
+
+    const id = document.getElementById('templateId').value;
+
+    // Используем существующий API эндпоинт для создания/обновления шаблона
+    fetch('/diary/api/timetable-template', {
+        method: 'POST',  // Эндпоинт работает и как create, и как update
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сохранения');
+            }
+            return response.json();
+        })
+        .then(data => {
+            showNotification(id ? 'Урок обновлен' : 'Урок добавлен', 'success');
+            setTimeout(() => location.reload(), 1000); // Перезагружаем через секунду
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Ошибка при сохранении', 'error');
+        });
+});
+
+// Функция показа уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${type === 'success' ? 'var(--grade-great-bg, #4ade80)' : 'var(--grade-bad-bg, #fb242b)'};
+            color: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-card, 0 10px 30px rgba(0,0,0,0.1));
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Закрытие модальных окон по клику вне их
+window.onclick = function(event) {
+    const modals = ['templateModal', 'newSubjectModal', 'confirmModal'];
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+// Добавляем стили для анимаций, если их нет в CSS
+const style = document.createElement('style');
+style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+document.head.appendChild(style);

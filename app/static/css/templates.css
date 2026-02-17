@@ -1,77 +1,241 @@
+/* templates.css */
+@import "styles.css";
+
+/* Заголовок страницы */
+h1 {
+    color: var(--text-white);
+    margin-bottom: var(--spacing-xxxl, 40px);
+    font-weight: var(--font-weight-semibold, 600);
+    font-size: var(--font-size-xxl, 2rem);
+    text-shadow: var(--shadow-text);
+    text-align: center;
+    letter-spacing: -0.02em;
+}
+
+/* Контейнер шаблонов */
 .templates-container {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
+    padding: var(--spacing-xl, 20px);
 }
 
+/* Кнопка генерации */
+.generate-btn {
+    width: 100%;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    border: none;
+    padding: 18px 30px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: var(--font-weight-semibold, 600);
+    margin-bottom: var(--spacing-xxxl, 40px);
+    letter-spacing: -0.01em;
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.2));
+    transition: all var(--transition-default, 0.3s);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+}
+
+.generate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover, 0 20px 30px rgba(102, 126, 234, 0.3));
+    filter: brightness(1.1);
+}
+
+.generate-btn:active {
+    transform: translateY(0);
+}
+
+/* Секция дня */
 .day-section {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-card, 24px);
+    padding: var(--spacing-xl, 24px);
+    margin-bottom: var(--spacing-xl, 24px);
+    box-shadow: var(--shadow-card, 0 10px 30px rgba(0,0,0,0.05));
+    border: 1px solid var(--border-card, rgba(255,255,255,0.5));
+    transition: all var(--transition-default, 0.3s);
 }
 
+.day-section:hover {
+    box-shadow: var(--shadow-card-hover, 0 20px 40px rgba(102, 126, 234, 0.1));
+    transform: translateY(-2px);
+}
+
+/* Заголовок дня */
 .day-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #3498db;
+    font-size: 22px;
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--text-primary, #1e293b);
+    margin-bottom: var(--spacing-lg, 16px);
+    padding-bottom: var(--spacing-sm, 10px);
+    border-bottom: 2px solid;
+    border-image: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    border-image-slice: 1;
+    letter-spacing: -0.01em;
+    position: relative;
 }
 
+.day-title::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    border-radius: 2px;
+}
+
+/* Список шаблонов */
+.templates-list {
+    margin-bottom: var(--spacing-lg, 16px);
+}
+
+/* Элемент шаблона */
 .template-lesson {
     display: grid;
-    grid-template-columns: 80px 1fr 100px 50px;
-    gap: 10px;
-    padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
+    grid-template-columns: 60px 1fr 120px 50px;
+    gap: var(--spacing-md, 12px);
+    padding: var(--spacing-md, 14px) var(--spacing-lg, 16px);
     align-items: center;
+    border-radius: var(--border-radius-lesson, 12px);
+    transition: all var(--transition-fast, 0.2s);
+    background: transparent;
+    border-bottom: 1px solid var(--border-lesson, #e2e8f0);
 }
 
 .template-lesson:hover {
-    background: #f8f9fa;
+    background: rgba(102, 126, 234, 0.03);
+    transform: translateX(4px);
 }
 
+/* Последний элемент без границы */
+.template-lesson:last-child {
+    border-bottom: none;
+}
+
+/* Номер урока */
 .lesson-number {
-    font-weight: bold;
-    color: #3498db;
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--primary-start, #667eea);
+    font-size: 18px;
+    background: rgba(102, 126, 234, 0.1);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    transition: all var(--transition-fast, 0.2s);
 }
 
+.template-lesson:hover .lesson-number {
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    transform: scale(1.05);
+}
+
+/* Название предмета */
 .lesson-subject {
-    font-weight: 600;
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--text-primary, #1e293b);
+    font-size: 16px;
+    letter-spacing: -0.01em;
 }
 
+/* Время урока */
 .lesson-time {
-    color: #7f8c8d;
-    font-size: 0.9em;
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+    font-weight: var(--font-weight-normal, 400);
+    background: rgba(100, 116, 139, 0.05);
+    padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+    border-radius: 20px;
+    text-align: center;
+    transition: all var(--transition-fast, 0.2s);
+}
+
+.template-lesson:hover .lesson-time {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-start, #667eea);
+}
+
+/* Действия с уроком */
+.lesson-actions {
+    display: flex;
+    gap: var(--spacing-xs, 4px);
+    justify-content: flex-end;
 }
 
 .lesson-actions button {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.2em;
-    padding: 5px;
+    font-size: 18px;
+    padding: var(--spacing-xs, 6px);
+    border-radius: 10px;
+    transition: all var(--transition-fast, 0.2s);
+    opacity: 0.7;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.lesson-actions button:hover {
+    opacity: 1;
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.lesson-actions button:first-child:hover {
+    color: var(--primary-start, #667eea);
+}
+
+.lesson-actions button:last-child:hover {
+    color: var(--grade-bad-bg, #fb242b);
+}
+
+/* Кнопка добавления урока */
 .add-lesson-btn {
-    background: none;
-    border: 2px dashed #27ae60;
-    color: #27ae60;
-    padding: 10px;
+    background: transparent;
+    border: 2px dashed var(--border-lesson, #e2e8f0);
+    color: var(--primary-start, #667eea);
+    padding: var(--spacing-md, 14px);
     width: 100%;
-    border-radius: 8px;
+    border-radius: 14px;
     cursor: pointer;
-    font-size: 0.9em;
-    margin-top: 10px;
+    font-size: 15px;
+    font-weight: var(--font-weight-medium, 500);
+    margin-top: var(--spacing-md, 12px);
+    transition: all var(--transition-default, 0.3s);
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm, 8px);
 }
 
 .add-lesson-btn:hover {
-    background: #27ae60;
-    color: white;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.2));
 }
 
+.add-lesson-btn:active {
+    transform: translateY(0);
+}
+
+/* Модальное окно */
 .modal {
     display: none;
     position: fixed;
@@ -79,82 +243,426 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    animation: fadeIn var(--transition-default, 0.3s);
 }
 
 .modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: var(--spacing-xxl, 32px);
+    border-radius: var(--border-radius-card, 28px);
     width: 90%;
     max-width: 500px;
+    box-shadow: var(--shadow-card-hover, 0 30px 50px rgba(0,0,0,0.2));
+    border: 1px solid var(--border-card, rgba(255,255,255,0.5));
+    animation: slideUp var(--transition-default, 0.3s);
 }
 
-.form-group {
-    margin-bottom: 15px;
+.modal-content h2 {
+    font-size: 28px;
+    font-weight: var(--font-weight-semibold, 600);
+    margin-bottom: var(--spacing-xl, 24px);
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
 }
 
-.form-group label {
+/* Группа формы в модалке */
+.modal-content .form-group {
+    margin-bottom: var(--spacing-lg, 20px);
+}
+
+.modal-content .form-group label {
     display: block;
-    margin-bottom: 5px;
-    color: #2c3e50;
-    font-weight: 500;
+    margin-bottom: var(--spacing-xs, 8px);
+    color: var(--text-primary, #1e293b);
+    font-weight: var(--font-weight-medium, 500);
+    font-size: 15px;
+    letter-spacing: -0.01em;
 }
 
-.form-group input,
-.form-group select {
+.modal-content .form-group input,
+.modal-content .form-group select {
     width: 100%;
-    padding: 8px 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 1em;
+    padding: 14px 16px;
+    border: 2px solid var(--border-lesson, #e2e8f0);
+    border-radius: 14px;
+    font-size: 15px;
+    transition: all var(--transition-fast, 0.2s);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary, #1e293b);
+    font-family: var(--font-family, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
+.modal-content .form-group input:focus,
+.modal-content .form-group select:focus {
+    outline: none;
+    border-color: var(--primary-start, #667eea);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.modal-content .form-group input:hover,
+.modal-content .form-group select:hover {
+    border-color: var(--primary-end, #764ba2);
+}
+
+/* Кнопки модального окна */
 .modal-buttons {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
+    gap: var(--spacing-md, 12px);
+    margin-top: var(--spacing-xl, 28px);
 }
 
 .btn {
-    padding: 10px 20px;
+    padding: 14px 20px;
     border: none;
-    border-radius: 8px;
+    border-radius: 14px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 15px;
+    font-weight: var(--font-weight-medium, 500);
     flex: 1;
+    transition: all var(--transition-fast, 0.2s);
+    letter-spacing: -0.01em;
 }
 
 .btn-primary {
-    background: #3498db;
-    color: white;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.2));
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover, 0 20px 30px rgba(102, 126, 234, 0.3));
+    filter: brightness(1.1);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
 }
 
 .btn-secondary {
-    background: #95a5a6;
-    color: white;
+    background: rgba(100, 116, 139, 0.1);
+    color: var(--text-secondary, #64748b);
+    border: 1px solid var(--border-lesson, #e2e8f0);
+}
+
+.btn-secondary:hover {
+    background: rgba(100, 116, 139, 0.2);
+    color: var(--text-primary, #1e293b);
+    transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
 }
 
 .btn-danger {
-    background: #e74c3c;
-    color: white;
+    background: var(--grade-bad-bg, #fb242b);
+    color: var(--text-white, white);
+    opacity: 0.9;
 }
 
-.generate-btn {
-    background: #27ae60;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 8px;
+.btn-danger:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(251, 36, 43, 0.3);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Темная тема */
+[data-theme="dark"] .day-section {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--border-card, rgba(255,255,255,0.1));
+}
+
+[data-theme="dark"] .day-title {
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .lesson-subject {
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .lesson-time {
+    color: var(--text-secondary, #94a3b8);
+    background: rgba(148, 163, 184, 0.1);
+}
+
+[data-theme="dark"] .template-lesson:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .template-lesson:hover .lesson-time {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] .lesson-number {
+    background: rgba(76, 29, 149, 0.2);
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] .template-lesson:hover .lesson-number {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+    color: var(--text-white, white);
+}
+
+[data-theme="dark"] .add-lesson-btn {
+    border-color: var(--border-lesson, #334155);
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] .modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: var(--border-card, rgba(255,255,255,0.1));
+}
+
+[data-theme="dark"] .modal-content .form-group label {
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .modal-content .form-group input,
+[data-theme="dark"] .modal-content .form-group select {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: var(--border-lesson, #334155);
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] .modal-content .form-group input:focus,
+[data-theme="dark"] .modal-content .form-group select:focus {
+    border-color: var(--primary-start, #4c1d95);
+    box-shadow: 0 0 0 4px rgba(76, 29, 149, 0.2);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-secondary, #94a3b8);
+    border-color: var(--border-lesson, #334155);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--text-white, #f1f5f9);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .templates-container {
+        padding: var(--spacing-md, 12px);
+    }
+
+    .template-lesson {
+        grid-template-columns: 50px 1fr 100px 40px;
+        gap: var(--spacing-sm, 8px);
+        padding: var(--spacing-sm, 10px);
+    }
+
+    .lesson-number {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+
+    .lesson-subject {
+        font-size: 15px;
+    }
+
+    .lesson-time {
+        font-size: 13px;
+        padding: var(--spacing-xs, 4px);
+    }
+
+    .day-title {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .template-lesson {
+        grid-template-columns: 40px 1fr 80px 35px;
+        gap: var(--spacing-xs, 6px);
+    }
+
+    .lesson-number {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+
+    .lesson-subject {
+        font-size: 14px;
+    }
+
+    .lesson-time {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .lesson-actions button {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+
+    .generate-btn {
+        padding: 14px 20px;
+        font-size: 15px;
+    }
+
+    .modal-content {
+        padding: var(--spacing-xl, 24px);
+    }
+
+    .modal-content h2 {
+        font-size: 24px;
+    }
+}
+
+/* Анимация загрузки */
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.subject-select-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.subject-select-wrapper select {
+    flex: 1;
+}
+
+.add-subject-btn {
+    width: 46px;
+    height: 46px;
+    border: 2px dashed var(--border-lesson, #e2e8f0);
+    background: transparent;
+    border-radius: 14px;
     cursor: pointer;
-    font-size: 1.1em;
-    margin: 20px 0;
-    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast, 0.2s);
+    color: var(--primary-start, #667eea);
+    font-size: 24px;
+    font-weight: var(--font-weight-semibold, 600);
+    padding: 0;
 }
 
-.generate-btn:hover {
-    background: #229954;
+.add-subject-btn:hover {
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    border-color: transparent;
+    transform: scale(1.05);
+}
+
+.add-subject-btn .plus-icon {
+    line-height: 1;
+    margin-top: -2px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md, 15px);
+}
+
+.small-modal {
+    max-width: 400px;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-lesson, #e2e8f0);
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: var(--font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+    resize: vertical;
+    transition: all var(--transition-fast, 0.2s);
+    background: var(--bg-card, white);
+    color: var(--text-primary, #1e293b);
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-start, #667eea);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+textarea::placeholder {
+    color: var(--text-secondary, #64748b);
+    opacity: 0.5;
+}
+
+/* Темная тема для новых элементов */
+[data-theme="dark"] .add-subject-btn {
+    border-color: var(--border-lesson, #334155);
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] textarea {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: var(--border-lesson, #334155);
+    color: var(--text-white, #f1f5f9);
+}
+
+[data-theme="dark"] textarea:focus {
+    border-color: var(--primary-start, #4c1d95);
+    box-shadow: 0 0 0 4px rgba(76, 29, 149, 0.2);
+}
+
+[data-theme="dark"] textarea::placeholder {
+    color: var(--text-secondary, #94a3b8);
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm, 10px);
+    }
+
+    .subject-select-wrapper {
+        flex-wrap: wrap;
+    }
+
+    .add-subject-btn {
+        width: 100%;
+        height: 46px;
+    }
 }
