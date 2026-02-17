@@ -173,3 +173,29 @@ function deleteGrade() {
             });
     }
 }
+
+function generateLessonsFromTemplate() {
+    if (!confirm('Создать уроки на 2 недели вперед из шаблона? Существующие уроки будут обновлены.')) {
+        return;
+    }
+
+    fetch('/diary/api/generate-from-template', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Уроки успешно созданы! Добавлено/обновлено: ${data.generated} уроков`);
+                location.reload();
+            } else {
+                alert('Ошибка при создании уроков: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при создании уроков');
+        });
+}
