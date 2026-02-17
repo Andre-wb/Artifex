@@ -262,5 +262,29 @@ class GroupMemberOut(BaseModel):
 class GroupJoinRequest(BaseModel):
     invite_code: str
 
+class SendMessageRequest(BaseModel):
+    receiver_id: int
+    content: str
+
+class MessageOut(BaseModel):
+    id: int
+    sender_id: int
+    sender_username: str
+    receiver_id: int
+    content: str
+    created_at: datetime
+    is_read: bool
+
+    class Config:
+        from_attributes = True
+
+class ContactOut(BaseModel):
+    user_id: int
+    username: str
+    is_teacher: bool
+    last_message: Optional[str] = None
+    last_time: Optional[datetime] = None
+    unread: int = 0
+
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()

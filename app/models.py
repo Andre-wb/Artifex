@@ -37,6 +37,8 @@ class User(Base):
     grades = relationship("Grade", back_populates="user", cascade="all, delete-orphan")
     timetable_templates = relationship("TimetableTemplate", back_populates="user", cascade="all, delete-orphan")
     achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
+    teacher_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    teacher = relationship("User", remote_side=[id], backref="students")
 
 class RefreshToken(Base):
     __tablename__ = 'refresh_tokens'
@@ -170,7 +172,6 @@ class Group(Base):
     is_active = Column(Boolean, default=True)                 # активен ли код
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Связи
     teacher = relationship("User", foreign_keys=[teacher_id], backref="created_groups")
     members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
 
@@ -185,3 +186,16 @@ class GroupMember(Base):
 
     group = relationship("Group", back_populates="members")
     user = relationship("User", backref="group_memberships")
+
+class Message(Base):
+    __tablename__ = 'messages'
+
+    id = Column(Integer, primary_key=True)
+    sender_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    receiver_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
