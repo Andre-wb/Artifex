@@ -307,14 +307,7 @@ class JWTKeyManager:
             age = time.time() - self._current_keys[self._current_kid]['created_at']
             return age > self._key_rotation_interval
 
-
-# Глобальный экземпляр менеджера ключей (синглтон для всего приложения)
 key_manager = JWTKeyManager()
-
-
-# -------------------------------------------------------------------
-# Валидация JWT claims
-# -------------------------------------------------------------------
 
 def validate_jwt_claims(payload: Dict[str, Any], token_type: str, required_scopes: Optional[List[str]] = None) -> bool:
     """Проверяет стандартные claims JWT в соответствии с требованиями приложения.
@@ -612,11 +605,6 @@ def validate_token_structure(token: str) -> bool:
     except jwt.InvalidTokenError:
         return False
 
-
-# -------------------------------------------------------------------
-# Работа с refresh токенами
-# -------------------------------------------------------------------
-
 def verify_refresh_token(refresh_token: str, db: Session, current_ip: Optional[str] = None, current_ua: Optional[str] = None) -> tuple[User, str, datetime]:
     """
     Проверяет валидность refresh токена.
@@ -625,12 +613,10 @@ def verify_refresh_token(refresh_token: str, db: Session, current_ip: Optional[s
     При подозрительной активности (смена IP/User-Agent) логирует предупреждение.
     """
     try:
-        # Пытаемся декодировать как JWT refresh токен
         payload = decode_token_with_key_rotation(refresh_token, token_type="refresh", verify=True)
         user_id = int(payload.get("sub"))
-        rti = payload.get("rti")  # идентификатор записи в БД
+        rti = payload.get("rti")
 
-        # Ищем запись в БД по id и user_id, которая не отозвана
         db_token = db.query(RefreshToken).filter(
             RefreshToken.id == rti,
             RefreshToken.user_id == user_id,
@@ -640,33 +626,26 @@ def verify_refresh_token(refresh_token: str, db: Session, current_ip: Optional[s
         if not db_token:
             raise HTTPException(status_code=401, detail="Token revoked")
 
-        # Проверяем срок действия по БД
         if db_token.expires_at < datetime.now(timezone.utc):
             db.delete(db_token)
             db.commit()
             raise HTTPException(status_code=401, detail="Refresh token expired")
 
-        # Проверка на подозрительную активность (смена IP или User-Agent)
         if current_ip and db_token.ip_address and current_ip != db_token.ip_address:
             logger.warning(f"Suspicious activity: IP changed for user {user_id}. Old: {db_token.ip_address}, New: {current_ip}")
-            # Здесь можно предпринять дополнительные меры, например, отправить уведомление пользователю
-            # Но мы не блокируем, только логируем
 
         if current_ua and db_token.user_agent and current_ua != db_token.user_agent:
             logger.warning(f"Suspicious activity: User-Agent changed for user {user_id}. Old: {db_token.user_agent}, New: {current_ua}")
 
-        # Ротация: создаём новый refresh токен
         new_refresh_token, new_expires_at = create_refresh_token(
             user_id, db,
             ip_address=current_ip,
             user_agent=current_ua
         )
 
-        # Отзываем старый токен
         db_token.revoked_at = datetime.now(timezone.utc)
         db.commit()
 
-        # Получаем пользователя
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -690,14 +669,12 @@ def verify_refresh_token(refresh_token: str, db: Session, current_ip: Optional[s
             db.commit()
             raise HTTPException(status_code=401, detail="Refresh token expired")
 
-        # Аналогичная проверка подозрительной активности
         if current_ip and db_token.ip_address and current_ip != db_token.ip_address:
             logger.warning(f"Suspicious activity: IP changed for user {user_id}. Old: {db_token.ip_address}, New: {current_ip}")
 
         if current_ua and db_token.user_agent and current_ua != db_token.user_agent:
             logger.warning(f"Suspicious activity: User-Agent changed for user {user_id}. Old: {db_token.user_agent}, New: {current_ua}")
 
-        # Ротация
         new_refresh_token, new_expires_at = create_refresh_token(
             user_id, db,
             ip_address=current_ip,
@@ -733,11 +710,6 @@ def revoke_all_user_refresh_tokens(user_id: int, db: Session):
     ).update({"revoked_at": datetime.now(timezone.utc)})
     db.commit()
 
-
-# -------------------------------------------------------------------
-# Зависимости FastAPI
-# -------------------------------------------------------------------
-
 async def get_current_user(
         request: Request,
         db: Session = Depends(get_db)
@@ -745,7 +717,6 @@ async def get_current_user(
     try:
         token = request.cookies.get("access_token")
 
-        # Если токен пришёл как байты, преобразуем в строку
         if isinstance(token, bytes):
             token = token.decode('utf-8')
 
@@ -755,8 +726,6 @@ async def get_current_user(
 
         token = token.strip()
 
-        # Дополнительная проверка: если токен всё ещё начинается с "b'" и заканчивается "'", удаляем
-        # Это может случиться, если cookie была установлена как repr(bytes)
         if token.startswith("b'") and token.endswith("'"):
             token = token[2:-1]
 

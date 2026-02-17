@@ -63,3 +63,5 @@ class Config:
 
     PRIVATE_KEY_PATH = 'secrets/private.pem'
     PUBLIC_KEY_PATH = 'secrets/public.pem'
+
+    API_KEY = os.getenv("GROQ_API_KEY")

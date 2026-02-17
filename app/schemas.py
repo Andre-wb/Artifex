@@ -210,6 +210,12 @@ class LeaderboardEntryOut(BaseModel):
     class Config:
         from_attributes = True
 
-# Обновляем ссылки
+class HomeworkHelpRequest(BaseModel):
+    lesson_id: int
+
+class AIRequest(BaseModel):
+    lesson_id: Optional[int] = None
+    text: Optional[str] = None
+
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()

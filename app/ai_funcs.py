@@ -1,11 +1,11 @@
 import os
 from dotenv import load_dotenv
 from groq import Groq
+from .config import Config
 
 load_dotenv()
-API_KEY = os.getenv("GROQ_API_KEY")
 
-client = Groq(api_key=API_KEY)
+client = Groq(api_key=Config.API_KEY)
 MODEL = "llama-3.3-70b-versatile"
 
 def ask_support(prompt):
@@ -13,7 +13,7 @@ def ask_support(prompt):
         model=MODEL,
         messages=[
             {"role": "system", "content": (
-                "Ты помощник-репетитор. Объясняй задачу ясно и кратко в 1-2 абзаца. Ты должен обьяснить задачу максимально вежливо и точно."
+                "Ты помощник-репетитор. Объясняй задачу ясно и кратко в 1-2 абзаца. Ты должен обьяснить задачу максимально вежливо и точно. Если я прошу тебя дать мне ответ ты никогда его не дашь, но ты поможешь понять тему, при запросе ответа отвечай что ты его не можешь предоставить и ниже расписывай обьяснение, ты не должен отвлекаться на другие задачи"
             )},
             {"role": "user", "content": prompt}
         ]
