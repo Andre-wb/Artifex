@@ -114,14 +114,14 @@ def extract_form_data(form_data, fields: list) -> dict:
 
     return result
 
-
 async def send_confirmation_email(user_email: str, token: str, request: Request) -> bool:
     """
     Отправляет письмо с подтверждением email.
     Возвращает True, если письмо успешно отправлено.
     """
+    smtp_config = Config.get_smtp_config()
     msg = MIMEMultipart()
-    msg['From'] = Config.SMTP_USERNAME
+    msg['From'] = smtp_config['SMTP_USERNAME']
     msg['To'] = user_email
     msg['Subject'] = 'Подтвердите ваш email'
 
@@ -139,9 +139,9 @@ async def send_confirmation_email(user_email: str, token: str, request: Request)
     msg.attach(MIMEText(html_content, 'html'))
 
     try:
-        with smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT) as server:
+        with smtplib.SMTP(smtp_config['SMTP_SERVER'], smtp_config['SMTP_PORT']) as server:
             server.starttls()
-            server.login(Config.SMTP_USERNAME, Config.SMTP_PASSWORD)
+            server.login(smtp_config['SMTP_USERNAME'], smtp_config['SMTP_PASSWORD'])
             server.send_message(msg)
         return True
     except Exception as e:
