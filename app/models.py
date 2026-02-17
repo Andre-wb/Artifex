@@ -22,6 +22,9 @@ class User(Base):
     league = Column(String(20), default='Bronze', nullable=False)
     streak_days = Column(Integer, default=0, nullable=False)
     last_streak_date = Column(Date, nullable=True)
+    school = Column(String(100), nullable=True)
+    grade = Column(String(20), nullable=True)
+    is_teacher = Column(Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -154,3 +157,31 @@ class TwoFactorCode(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", backref="two_factor_codes")
+
+class Group(Base):
+    __tablename__ = 'groups'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)               # название класса, например "7А"
+    school = Column(String(100), nullable=True)              # школа (можно дублировать из User или отдельно)
+    teacher_id = Column(Integer, ForeignKey('users.id'), nullable=False)  # создатель (учитель)
+    invite_code = Column(String(20), unique=True, nullable=False)  # уникальный код для вступления
+    expires_at = Column(DateTime, nullable=True)              # срок действия кода (null = бессрочно)
+    is_active = Column(Boolean, default=True)                 # активен ли код
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Связи
+    teacher = relationship("User", foreign_keys=[teacher_id], backref="created_groups")
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+
+
+class GroupMember(Base):
+    __tablename__ = 'group_members'
+
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    group = relationship("Group", back_populates="members")
+    user = relationship("User", backref="group_memberships")
