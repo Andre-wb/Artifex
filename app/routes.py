@@ -19,10 +19,14 @@ from .config import Config
 from .secure_cookie import create_secure_cookie
 from .email import safe_form_data, send_confirmation_email, confirm_token, extract_form_data, generate_confirmation_token
 from .database import get_db
-from .models import User, RefreshToken
+from .models import User, RefreshToken, TwoFactorCode  # добавлено TwoFactorCode
 from .auth import (
     get_current_user, get_current_user_optional,
-    create_access_token, create_refresh_token, verify_refresh_token
+    create_access_token, create_refresh_token, verify_refresh_token,
+    generate_2fa_code, hash_2fa_code, verify_2fa_code,
+    create_2fa_token, verify_2fa_token,
+    create_trusted_cookie, verify_trusted_cookie,
+    send_2fa_email
 )
 from .forms import register_form, login_form
 from .security import (
@@ -479,12 +483,12 @@ async def login(
 ):
     """
     Обрабатывает POST-запрос на аутентификацию пользователя.
-    Проверяет учётные данные, управляет блокировкой при множественных неудачных попытках,
-    при успехе создаёт access и refresh токены и устанавливает их в cookie.
+    При успехе проверяет наличие доверенной 2FA-куки (действует 15 минут).
+    Если кука есть и валидна – выдаёт токены сразу.
+    Иначе отправляет код на email и ожидает подтверждения.
     """
     try:
         form_data = await safe_form_data(request)
-
         data = extract_form_data(form_data, ["credential", "password"])
         credential = data["credential"]
         password = data["password"]
@@ -494,18 +498,16 @@ async def login(
 
         if not credential or not password:
             new_cookie_token, new_form_token = generate_double_csrf_token()
-
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Все поля обязательны для заполнения",
                 "credential": credential,
                 "csrf_token": new_form_token
             })
-
             create_csrf_cookie(response, new_cookie_token)
             return response
 
-        # Поиск пользователя по email, телефону или имени пользователя
+        # Поиск пользователя по email, телефону или имени
         user = db.query(User).filter(
             or_(
                 User.email == bindparam('cred'),
@@ -514,11 +516,10 @@ async def login(
             )
         ).params(cred=credential).first()
 
-        # Проверка блокировки аккаунта
+        # Проверка блокировки
         if user and user.locked_until and user.locked_until > datetime.utcnow():
             _ = user.check_password(password)
             logger.warning(f"Попытка входа в заблокированный аккаунт: {credential}")
-
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
@@ -530,63 +531,12 @@ async def login(
             return response
 
         # Проверка пароля
-        if user and user.check_password(password):
-            # Сброс счётчика неудачных попыток
-            if user.failed_login_attempts > 0:
-                user.failed_login_attempts = 0
-                user.locked_until = None
-                db.commit()
-
-            # Проверка подтверждения email
-            if not user.confirmed:
-                logger.warning(f"Попытка входа без подтверждения email: {credential}")
-
-                new_cookie_token, new_form_token = generate_double_csrf_token()
-                response = request.app.state.templates.TemplateResponse("login.html", {
-                    "request": request,
-                    "error": "Подтвердите ваш Email. Проверьте почту.",
-                    "credential": credential,
-                    "csrf_token": new_form_token
-                })
-                create_csrf_cookie(response, new_cookie_token)
-                return response
-
-            # Получаем IP и User-Agent из запроса
-            client_ip = request.client.host if request.client else None
-            user_agent = request.headers.get("user-agent")
-
-            # Создаём токены
-            access_token = create_access_token(data={"sub": str(user.id)})
-            refresh_token, refresh_expires = create_refresh_token(
-                user.id,
-                db,
-                ip_address=client_ip,
-                user_agent=user_agent
-            )
-
-            # Формируем ответ-редирект на профиль
-            response = RedirectResponse("/profile", status_code=303)
-
-            # Устанавливаем безопасные cookies
-            create_secure_cookie(response, "access_token", access_token, 15 * 60)
-            create_secure_cookie(response, "refresh_token", refresh_token, 180 * 24 * 3600)
-
-            # Обновляем CSRF-токен
-            new_cookie_token, new_form_token = generate_double_csrf_token()
-            create_csrf_cookie(response, new_cookie_token)
-
-            logger.info(f"Успешный вход пользователя: {user.username} (ID: {user.id})")
-            return response
-
-        else:
-            # Неудачная попытка входа
+        if not user or not user.check_password(password):
             if user:
                 user.failed_login_attempts += 1
                 if user.failed_login_attempts >= 5:
                     user.locked_until = datetime.utcnow() + timedelta(minutes=30)
-                    logger.warning(f"Аккаунт {user.username} заблокирован до {user.locked_until}")
                 db.commit()
-
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = request.app.state.templates.TemplateResponse("login.html", {
                 "request": request,
@@ -597,16 +547,122 @@ async def login(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Сброс неудачных попыток
+        if user.failed_login_attempts > 0:
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            db.commit()
+
+        if not user.confirmed:
+            logger.warning(f"Попытка входа без подтверждения email: {credential}")
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = request.app.state.templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Подтвердите ваш Email. Проверьте почту.",
+                "credential": credential,
+                "csrf_token": new_form_token
+            })
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # --- Проверка доверенной 2FA-куки ---
+        trusted_token = request.cookies.get("trusted_2fa")
+        if trusted_token:
+            trusted_user_id = verify_trusted_cookie(trusted_token)
+            if trusted_user_id == user.id:
+                # Кука валидна – вход без 2FA
+                client_ip = request.client.host if request.client else None
+                user_agent = request.headers.get("user-agent")
+
+                refresh_token, refresh_expires = create_refresh_token(
+                    user.id, db,
+                    ip_address=client_ip,
+                    user_agent=user_agent
+                )
+                access_token = create_access_token(data={"sub": str(user.id)})
+
+                response = RedirectResponse("/profile", status_code=303)
+
+                create_secure_cookie(response, "access_token", access_token, 15*60)
+                create_secure_cookie(response, "refresh_token", refresh_token, 180*24*3600)
+
+                # Продлеваем доверенную куку (ещё на 15 минут)
+                response.set_cookie(
+                    key="trusted_2fa",
+                    value=create_trusted_cookie(user.id),
+                    httponly=True,
+                    secure=is_production,
+                    samesite='Lax' if is_production else 'None',
+                    max_age=900,  # 15 минут
+                    path="/"
+                )
+
+                new_cookie_token, new_form_token = generate_double_csrf_token()
+                create_csrf_cookie(response, new_cookie_token)
+
+                logger.info(f"Успешный вход (доверенное устройство): {user.username} (ID: {user.id})")
+                return response
+
+        # --- Двухфакторная аутентификация ---
+        # Генерируем код
+        code = generate_2fa_code()
+        code_hash = hash_2fa_code(code)
+        expires_at = datetime.utcnow() + timedelta(minutes=5)
+
+        # Удаляем старые коды пользователя
+        db.query(TwoFactorCode).filter(TwoFactorCode.user_id == user.id).delete()
+        db.add(TwoFactorCode(
+            user_id=user.id,
+            code_hash=code_hash,
+            expires_at=expires_at
+        ))
+        db.commit()
+
+        # Отправляем код
+        if not await send_2fa_email(user, code):
+            logger.error(f"Failed to send 2FA email to {user.email}")
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = request.app.state.templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Не удалось отправить код подтверждения. Попробуйте позже.",
+                "csrf_token": new_form_token
+            })
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # Создаём временную куку для 2FA
+        twofa_token = create_2fa_token(user.id)
+
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = request.app.state.templates.TemplateResponse("verify_2fa.html", {
+            "request": request,
+            "email": user.email,
+            "csrf_token": new_form_token
+        })
+
+        # Устанавливаем куку 2fa_token (на 10 минут)
+        response.set_cookie(
+            key="2fa_token",
+            value=twofa_token,
+            httponly=True,
+            secure=is_production,
+            samesite='Lax' if is_production else 'None',
+            max_age=600,  # 10 минут
+            path="/"
+        )
+        create_csrf_cookie(response, new_cookie_token)
+
+        logger.info(f"2FA код отправлен для пользователя: {user.username}")
+        return response
+
     except Exception as e:
         logger.error(f"Ошибка при входе: {str(e)}", exc_info=True)
-
         new_cookie_token, new_form_token = generate_double_csrf_token()
         response = request.app.state.templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.",
             "csrf_token": new_form_token
         }, status_code=500)
-
         create_csrf_cookie(response, new_cookie_token)
         return response
 
@@ -792,3 +848,115 @@ async def edit_profile(
 
     create_csrf_cookie(response, new_cookie_token)
     return response
+
+@router.post("/verify-2fa")
+@timing_safe_endpoint
+@rate_limit_safe(max_calls=5, window=60)
+@validate_input_safe
+async def verify_2fa(
+        request: Request,
+        code: str = Form(...),
+        db: Session = Depends(get_db)
+):
+    twofa_token = request.cookies.get("2fa_token")
+    if not twofa_token:
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "error": "Сессия истекла. Войдите снова."
+        })
+
+    user_id = verify_2fa_token(twofa_token)
+    if not user_id:
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "error": "Недействительная сессия. Войдите снова."
+        })
+
+    twofa_code = db.query(TwoFactorCode).filter(
+        TwoFactorCode.user_id == user_id,
+        TwoFactorCode.expires_at > datetime.utcnow()
+    ).first()
+
+    if not twofa_code:
+        return templates.TemplateResponse("verify_2fa.html", {
+            "request": request,
+            "error": "Код истёк. Запросите новый."
+        })
+
+    if twofa_code.attempts >= 5:
+        db.delete(twofa_code)
+        db.commit()
+        return templates.TemplateResponse("verify_2fa.html", {
+            "request": request,
+            "error": "Слишком много неверных попыток. Начните вход заново."
+        })
+
+    if verify_2fa_code(code, twofa_code.code_hash):
+        db.delete(twofa_code)
+        db.commit()
+
+        user = db.query(User).get(user_id)
+        if not user:
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Пользователь не найден"})
+
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        refresh_token, refresh_expires = create_refresh_token(user.id, db, ip_address=client_ip, user_agent=user_agent)
+        access_token = create_access_token(data={"sub": str(user.id)})
+
+        response = RedirectResponse("/profile", status_code=303)
+        create_secure_cookie(response, "access_token", access_token, 15*60)
+        create_secure_cookie(response, "refresh_token", refresh_token, 180*24*3600)
+
+        # Устанавливаем доверенную куку (на 15 минут)
+        response.set_cookie(
+            key="trusted_2fa",
+            value=create_trusted_cookie(user.id),
+            httponly=True,
+            secure=is_production,
+            samesite='Lax' if is_production else 'None',
+            max_age=900,
+            path="/"
+        )
+
+        # Удаляем куку 2fa_token
+        response.delete_cookie("2fa_token", path="/")
+
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        create_csrf_cookie(response, new_cookie_token)
+
+        return response
+    else:
+        twofa_code.attempts += 1
+        db.commit()
+        return templates.TemplateResponse("verify_2fa.html", {
+            "request": request,
+            "error": "Неверный код. Попробуйте снова.",
+        })
+
+@router.post("/resend-2fa")
+async def resend_2fa(request: Request, db: Session = Depends(get_db)):
+    twofa_token = request.cookies.get("2fa_token")
+    if not twofa_token:
+        return JSONResponse({"success": False, "error": "Сессия не найдена"}, status_code=400)
+
+    user_id = verify_2fa_token(twofa_token)
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Сессия истекла"}, status_code=400)
+
+    user = db.query(User).get(user_id)
+    if not user:
+        return JSONResponse({"success": False, "error": "Пользователь не найден"}, status_code=400)
+
+    db.query(TwoFactorCode).filter(TwoFactorCode.user_id == user_id).delete()
+
+    code = generate_2fa_code()
+    code_hash = hash_2fa_code(code)
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+    db.add(TwoFactorCode(user_id=user_id, code_hash=code_hash, expires_at=expires_at))
+    db.commit()
+
+    if await send_2fa_email(user, code):
+        return JSONResponse({"success": True})
+    else:
+        return JSONResponse({"success": False, "error": "Ошибка отправки письма"}, status_code=500)
