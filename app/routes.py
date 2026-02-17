@@ -147,7 +147,7 @@ async def register_user(
         grade = data.get("grade")
         is_teacher = data.get("is_teacher") == "true"
 
-        if not all([username, email, phone, password, confirm, school, grade, is_teacher]):
+        if not all([username, email, phone, password, confirm, school, grade]):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
                 "request": request,
