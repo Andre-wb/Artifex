@@ -24,8 +24,13 @@ from .models import User, RefreshToken
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
-
+from itsdangerous import URLSafeTimedSerializer
+from .email import send_email
 import logging
+import random
+import string
+import hashlib
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,64 @@ security = HTTPBearer()
 JWT_ISSUER = "artifex-api"               # издатель токена (наш сервис)
 JWT_AUDIENCE = "artifex-webapp"           # целевая аудитория (например, веб-приложение)
 JWT_TOKEN_TYPES = {"access", "refresh", "service"}  # допустимые типы токенов
+twofa_serializer = URLSafeTimedSerializer(Config.SECRET_KEY, salt="2fa-token")
+trusted_serializer = URLSafeTimedSerializer(Config.SECRET_KEY, salt="trusted-device")
 
+def generate_2fa_code(length: int = 6) -> str:
+    """Генерирует цифровой код указанной длины."""
+    return ''.join(random.choices(string.digits, k=length))
+
+def hash_2fa_code(code: str) -> str:
+    """Хеширует код с солью через PBKDF2."""
+    salt = secrets.token_hex(8)
+    hash_part = hashlib.pbkdf2_hmac('sha256', code.encode(), salt.encode(), 100000).hex()
+    return f"{hash_part}:{salt}"
+
+def verify_2fa_code(code: str, code_hash: str) -> bool:
+    """Проверяет код по хешу."""
+    try:
+        hash_part, salt = code_hash.split(':')
+        test_hash = hashlib.pbkdf2_hmac('sha256', code.encode(), salt.encode(), 100000).hex()
+        return secrets.compare_digest(test_hash, hash_part)
+    except Exception:
+        return False
+
+def create_2fa_token(user_id: int) -> str:
+    """Создаёт подписанный токен для временной куки 2FA (срок 10 минут)."""
+    return twofa_serializer.dumps({'user_id': user_id})
+
+def verify_2fa_token(token: str, max_age: int = 600) -> Optional[int]:
+    """Проверяет токен и возвращает user_id или None."""
+    try:
+        data = twofa_serializer.loads(token, max_age=max_age)
+        return data['user_id']
+    except Exception:
+        return None
+
+def create_trusted_cookie(user_id: int) -> str:
+    """Создаёт подписанную куку для доверенного устройства (срок 15 минут)."""
+    return trusted_serializer.dumps({'user_id': user_id})
+
+def verify_trusted_cookie(token: str, max_age: int = 900) -> Optional[int]:
+    """Проверяет доверенную куку и возвращает user_id или None."""
+    try:
+        data = trusted_serializer.loads(token, max_age=max_age)
+        return data['user_id']
+    except Exception:
+        return None
+
+async def send_2fa_email(user, code: str) -> bool:
+    """Отправляет код 2FA на email пользователя."""
+    subject = "Код подтверждения входа"
+    html_content = f"""
+    <html><body>
+        <p>Здравствуйте, {user.username}!</p>
+        <p>Ваш код для входа в систему: <strong>{code}</strong></p>
+        <p>Код действителен в течение 5 минут.</p>
+        <p>Если вы не пытались войти, проигнорируйте это письмо.</p>
+    </body></html>
+    """
+    return await send_email(user.email, subject, html_content)
 
 class JWTKeyManager:
     """
