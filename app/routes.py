@@ -137,7 +137,7 @@ async def register_user(
 ):
     try:
         form_data = await safe_form_data(request)
-        data = extract_form_data(form_data, ["username", "email", "phone", "password", "confirm"])
+        data = extract_form_data(form_data, ["username", "email", "phone", "password", "confirm", "school", "grade", "is_teacher"])
         username = data["username"]
         email = data["email"]
         phone = data["phone"]
