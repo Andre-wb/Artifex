@@ -14,7 +14,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -649,17 +649,23 @@ def revoke_all_user_refresh_tokens(user_id: int, db: Session):
 # Зависимости FastAPI
 # -------------------------------------------------------------------
 
-def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security),
+from fastapi import Request  # Добавьте этот импорт в начало файла
+
+async def get_current_user(
+        request: Request,
         db: Session = Depends(get_db)
 ) -> User:
-    """FastAPI dependency для получения текущего аутентифицированного пользователя.
-    Извлекает токен из заголовка Authorization, декодирует его как access token,
-    проверяет валидность, получает пользователя из БД и возвращает его.
-    Если пользователь заблокирован (locked_until в будущем), выбрасывает 403.
-    """
+    """FastAPI dependency для получения текущего аутентифицированного пользователя из cookie"""
     try:
-        token = credentials.credentials
+        # Получаем токен из cookie вместо заголовка Authorization
+        token = request.cookies.get("access_token")
+
+        if not token:
+            logger.warning("No access token in cookies")
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+        logger.info(f"Token from cookie: {token[:20]}...")  # Отладка
+
         payload = decode_token_with_key_rotation(token, token_type="access", verify=True)
 
         user_id = payload.get("sub")
@@ -679,6 +685,7 @@ def get_current_user(
         if user.locked_until and user.locked_until > datetime.now(timezone.utc):
             raise HTTPException(status_code=403, detail="Account locked")
 
+        logger.info(f"User authenticated: {user.username} (ID: {user.id})")
         return user
 
     except HTTPException:
@@ -687,23 +694,21 @@ def get_current_user(
         logger.error(f"Unexpected error in get_current_user: {e}")
         raise HTTPException(status_code=500, detail="Authentication error")
 
-
-def get_current_user_optional(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+async def get_current_user_optional(
+        request: Request,
         db: Session = Depends(get_db)
 ) -> Optional[User]:
-    """FastAPI dependency для получения текущего пользователя (опционально).
-    Если токен отсутствует или недействителен (401, 403), возвращает None.
-    В остальных случаях пробрасывает исключение.
-    """
+    """FastAPI dependency для получения текущего пользователя из cookie (опционально)"""
     try:
-        if credentials:
-            return get_current_user(credentials, db)
-    except HTTPException as e:
-        if e.status_code in (401, 403):
+        token = request.cookies.get("access_token")
+        if not token:
             return None
-        raise
-    return None
+
+        return await get_current_user(request, db)
+    except HTTPException:
+        return None
+    except Exception:
+        return None
 
 async def get_current_admin_user(
         current_user: User = Depends(get_current_user)

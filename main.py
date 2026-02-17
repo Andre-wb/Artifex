@@ -48,7 +48,7 @@ waf_config = {
 }
 
 # Инициализация WAF
-waf_engine = setup_waf(app, waf_config)
+# waf_engine = setup_waf(app, waf_config)
 
 key_manager.initialize()
 
