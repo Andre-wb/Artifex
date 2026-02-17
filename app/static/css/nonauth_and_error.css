@@ -26,11 +26,6 @@
     transition: transform var(--transition-default, 0.3s), box-shadow var(--transition-default, 0.3s);
 }
 
-.auth-content:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-card-hover, 0 30px 60px rgba(102, 126, 234, 0.15));
-}
-
 /* Иконка замка */
 .lock-icon {
     width: 80px;
@@ -307,10 +302,6 @@
     opacity: 0;
     transition: opacity var(--transition-default, 0.3s);
     pointer-events: none;
-}
-
-.auth-content:hover::before {
-    opacity: 0.2;
 }
 
 /* Анимация появления контента */
