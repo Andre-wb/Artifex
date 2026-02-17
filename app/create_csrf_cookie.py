@@ -10,8 +10,7 @@ from fastapi import Response
 # Определяем, работает ли приложение в production-режиме.
 # Предполагается, что Config.ENVIRONMENT содержит булево значение или строку,
 # которая приводится к булю (например, True/False или 'production').
-is_production = Config.ENVIRONMENT
-
+is_production = Config.ENVIRONMENT == 'production'
 
 def create_csrf_cookie(response: Response, csrf_token: str):
     """
