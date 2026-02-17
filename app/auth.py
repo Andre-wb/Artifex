@@ -146,9 +146,7 @@ class JWTKeyManager:
             if keys:
                 self._current_keys[keys['kid']] = keys
                 self._current_kid = keys['kid']
-                logger.info(f"Keys loaded from files. KID: {keys['kid']}")
             else:
-                # Генерируем новую пару
                 keys = self._generate_new_key_pair()
                 self._current_keys[keys['kid']] = keys
                 self._current_kid = keys['kid']
