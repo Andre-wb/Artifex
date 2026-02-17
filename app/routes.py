@@ -711,10 +711,6 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 
     return response
 
-# -------------------------------------------------------------------
-# Профиль
-# -------------------------------------------------------------------
-
 @router.get("/profile", response_class=HTMLResponse)
 @timing_safe_endpoint
 @rate_limit_safe(max_calls=5, window=60)
