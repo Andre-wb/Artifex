@@ -44,6 +44,8 @@ from .security_utils import (
     verify_csrf_token
 )
 from .create_csrf_cookie import create_csrf_cookie
+from .ai_funcs import ask_support
+from .schemas import HomeworkHelpRequest, AIRequest
 
 
 router = APIRouter()
@@ -1068,3 +1070,84 @@ async def resend_2fa(request: Request, db: Session = Depends(get_db)):
         return JSONResponse({"success": True})
     else:
         return JSONResponse({"success": False, "error": "Ошибка отправки письма"}, status_code=500)
+
+@router.post("/api/help-with-homework")
+async def help_with_homework(
+        request: Request,
+        help_req: HomeworkHelpRequest,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """
+    Возвращает объяснение домашнего задания из указанного урока.
+    """
+    lesson = db.query(Lesson).filter(
+        Lesson.id == help_req.lesson_id,
+        Lesson.user_id == current_user.id
+    ).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Урок не найден")
+
+    if not lesson.homework:
+        return JSONResponse({
+            "success": False,
+            "error": "Для этого урока не указано домашнее задание"
+        })
+
+    try:
+        explanation = ask_support(lesson.homework)
+        return JSONResponse({
+            "success": True,
+            "homework": lesson.homework,
+            "explanation": explanation
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при вызове нейросети: {e}", exc_info=True)
+        return JSONResponse({
+            "success": False,
+            "error": "Не удалось получить объяснение. Попробуйте позже."
+        }, status_code=500)
+
+
+@router.post("/api/ask-ai")
+async def ask_ai(
+        request: Request,
+        ai_req: AIRequest,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """
+    Универсальный эндпоинт: принимает либо lesson_id (берёт homework из БД),
+    либо text (пользовательский ввод) и возвращает объяснение от нейросети.
+    """
+    prompt = None
+    if ai_req.lesson_id:
+        lesson = db.query(Lesson).filter(
+            Lesson.id == ai_req.lesson_id,
+            Lesson.user_id == current_user.id
+        ).first()
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Урок не найден")
+        if not lesson.homework:
+            return JSONResponse({
+                "success": False,
+                "error": "Для этого урока не указано домашнее задание"
+            })
+        prompt = lesson.homework
+    elif ai_req.text:
+        prompt = ai_req.text
+    else:
+        raise HTTPException(status_code=400, detail="Необходимо указать lesson_id или text")
+
+    try:
+        explanation = ask_support(prompt)
+        return JSONResponse({
+            "success": True,
+            "explanation": explanation
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при вызове нейросети: {e}", exc_info=True)
+        return JSONResponse({
+            "success": False,
+            "error": "Не удалось получить объяснение. Попробуйте позже."
+        }, status_code=500)
