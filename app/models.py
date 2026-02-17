@@ -199,3 +199,15 @@ class Message(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
+
+class MoodEntry(Base):
+    __tablename__ = "mood_entries"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    mood = Column(String(10), nullable=False)          # happy, neutral, sad
+    time_of_day = Column(String(10), nullable=False)   # morning, afternoon, evening
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="mood_entries")

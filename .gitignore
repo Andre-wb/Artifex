@@ -208,3 +208,5 @@ __marimo__/
 
 secrets/public.pem
 secrets/private.pem
+
+app.db

@@ -4,6 +4,7 @@ from pydantic import BaseModel, EmailStr, validator
 import re
 from datetime import datetime
 from .security import validate_password
+from enum import Enum
 
 # Forward references для решения циклических зависимостей
 GradeResponse = ForwardRef('GradeResponse')
@@ -285,6 +286,38 @@ class ContactOut(BaseModel):
     last_message: Optional[str] = None
     last_time: Optional[datetime] = None
     unread: int = 0
+
+class MoodEnum(str, Enum):
+    happy = "happy"
+    neutral = "neutral"
+    sad = "sad"
+
+class TimeOfDayEnum(str, Enum):
+    morning = "morning"
+    afternoon = "afternoon"
+    evening = "evening"
+
+class MoodEntryCreate(BaseModel):
+    mood: MoodEnum
+    time_of_day: TimeOfDayEnum
+    comment: Optional[str] = None
+
+class MoodEntryOut(BaseModel):
+    id: int
+    user_id: int
+    mood: str
+    time_of_day: str
+    comment: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class MoodAdviceRequest(BaseModel):
+    comment: str
+
+class MoodAdviceResponse(BaseModel):
+    advice: str
 
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()

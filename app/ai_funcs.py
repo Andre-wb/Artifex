@@ -1,26 +1,54 @@
-import os
-from dotenv import load_dotenv
 from groq import Groq
 from .config import Config
-
-load_dotenv()
 
 client = Groq(api_key=Config.API_KEY)
 MODEL = "llama-3.3-70b-versatile"
 
-def ask_support(prompt):
-    chat_completion = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": (
-                "Ты помощник-репетитор. Объясняй задачу ясно и кратко в 1-2 абзаца. Ты должен обьяснить задачу максимально вежливо и точно. Если я прошу тебя дать мне ответ ты никогда его не дашь, но ты поможешь понять тему, при запросе ответа отвечай что ты его не можешь предоставить и ниже расписывай обьяснение, ты не должен отвлекаться на другие задачи"
-            )},
-            {"role": "user", "content": prompt}
-        ]
+SYSTEM_PROMPTS = {
+    "explain_homework": (
+        "Ты — помощник-репетитор. Объясняй задачу ясно и кратко в 1-2 абзаца. "
+        "Ты должен объяснить задачу максимально вежливо и точно. Если пользователь просит тебя дать ответ, "
+        "ты никогда его не дашь, но поможешь понять тему. При запросе ответа отвечай, что ты не можешь его предоставить, "
+        "и ниже расписывай объяснение. Не отвлекайся на другие задачи."
+    ),
+    "break_down_task": (
+        "Ты — помощник по планированию. Разбей задачу на 3–5 простых шагов. "
+        "Ответь строго в формате JSON: {\"steps\": [\"шаг1\", \"шаг2\", ...]}. Не добавляй пояснений."
+    ),
+    "mood_advice": (
+        "Ты — эмпатичный помощник по улучшению эмоционального состояния. "
+        "Пользователь описал своё состояние или проблему. Дай добрый, короткий и практичный совет, "
+        "как справиться с этой ситуацией или улучшить настроение. Не ставь медицинских диагнозов. "
+        "Если комментарий неясен, вежливо попроси уточнить. Ответ напиши на русском языке, дружелюбно и поддерживающе."
+    ),
+    "general_help": (
+        "Ты — полезный ассистент. Отвечай на вопросы пользователя вежливо, точно и по существу. "
+        "Если вопрос не относится к школьной тематике, старайся помочь в рамках общих знаний."
     )
-    return chat_completion.choices[0].message.content
+}
 
-if __name__ == "__main__":
-    task = input("Введите дз: ")
-    explanation = ask_support(task)
-    print(explanation)
+def ask_support(prompt: str, task_type: str = "explain_homework") -> str:
+    """
+    Отправляет запрос в Groq API с выбором системного промпта в зависимости от типа задачи.
+
+    Аргументы:
+        prompt: пользовательский ввод (текст задачи или вопроса)
+        task_type: тип задачи, определяющий системный промпт.
+                   Допустимые значения: 'explain_homework', 'break_down_task', 'mood_advice', 'general_help'.
+
+    Возвращает:
+        Ответ от модели (текст).
+    """
+    system_prompt = SYSTEM_PROMPTS.get(task_type, SYSTEM_PROMPTS["general_help"])
+
+    try:
+        chat_completion = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        return f"Произошла ошибка при обращении к AI: {str(e)}"
