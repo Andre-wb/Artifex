@@ -276,6 +276,10 @@ def validate_jwt_claims(payload: Dict[str, Any], token_type: str, required_scope
         logger.warning(f"Missing required claims: {missing_claims}")
         return False
 
+    print("🔍 VALIDATE CLAIMS PAYLOAD:", payload)
+
+    logger.info(f"validate_jwt_claims called with payload keys: {list(payload.keys())}")
+
     # Проверка типа токена
     if payload.get("typ") != token_type:
         logger.warning(f"Invalid token type. Expected: {token_type}, Got: {payload.get('typ')}")
@@ -285,6 +289,8 @@ def validate_jwt_claims(payload: Dict[str, Any], token_type: str, required_scope
     if payload.get("iss") != JWT_ISSUER:
         logger.warning(f"Invalid issuer. Expected: {JWT_ISSUER}, Got: {payload.get('iss')}")
         return False
+
+    logger.info(f"validate_jwt_claims: full payload = {payload}")
 
     # Проверка аудитории (может быть строкой или списком)
     audiences = payload.get("aud", [])
@@ -346,7 +352,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     Если expires_delta не указан, используется значение из Config.ACCESS_TOKEN_EXPIRE_MINUTES.
     Возвращает строку с подписанным JWT.
     """
+
     to_encode = data.copy()
+    logger.info(f"create_access_token: payload to encode = {to_encode}")
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -362,6 +370,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         "jti": secrets.token_hex(16),        # уникальный идентификатор токена (16 байт = 32 hex)
         "kid": key_manager.get_current_kid()  # идентификатор ключа, которым подписан токен
     })
+
+    print("🔍 TO_ENCODE before encode:", to_encode)
 
     try:
         private_key = key_manager.get_private_key()
@@ -464,13 +474,6 @@ def create_service_token(service_name: str, scopes: list, expires_hours: int = 2
 def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
                                    required_scopes: Optional[List[str]] = None,
                                    verify: bool = True) -> Dict[str, Any]:
-    """Декодирует токен, пытаясь использовать ключ из заголовка kid, с возможностью ротации.
-    Если верификация подписи не удаётся из-за InvalidSignatureError, выполняется ротация ключей
-    и повторная попытка (максимум 2 попытки).
-    После успешного декодирования (если verify=True) дополнительно проверяет claims через validate_jwt_claims.
-    Возвращает полезную нагрузку токена (payload).
-    В случае ошибок выбрасывает HTTPException с соответствующим статусом.
-    """
     max_retries = 2
     for attempt in range(max_retries):
         try:
@@ -483,7 +486,11 @@ def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
             if not public_key:
                 raise ValueError(f"No public key for kid {token_kid}")
 
+            # Логируем попытку
+            logger.info(f"decode_token attempt {attempt+1}, kid: {token_kid}")
+
             # Декодируем и проверяем подпись
+            # Важно: не передаём параметр audience, чтобы библиотека не проверяла его автоматически
             payload = jwt.decode(
                 token,
                 public_key,
@@ -492,10 +499,13 @@ def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
                     "verify_signature": verify,
                     "verify_exp": verify,
                     "verify_iat": verify,
+                    "verify_aud": False,
                     "require": ["exp", "iat", "iss", "aud", "sub", "typ", "jti"] if verify else []
                 },
                 leeway=30  # допуск 30 секунд на рассинхронизацию часов
             )
+
+            logger.info(f"decode_token: payload = {payload}")
 
             # Если требуется полная проверка, выполняем дополнительную валидацию claims
             if verify and not validate_jwt_claims(payload, token_type, required_scopes):
@@ -523,7 +533,6 @@ def decode_token_with_key_rotation(token: str, token_type: Optional[str] = None,
                 raise HTTPException(status_code=500, detail="Token verification error")
 
     raise HTTPException(status_code=401, detail="Token verification failed after key rotation")
-
 
 def decode_token(token: str, verify: bool = True) -> Dict[str, Any]:
     """Упрощённый вызов для обратной совместимости (без указания типа токена и scopes)."""
@@ -655,16 +664,27 @@ async def get_current_user(
         request: Request,
         db: Session = Depends(get_db)
 ) -> User:
-    """FastAPI dependency для получения текущего аутентифицированного пользователя из cookie"""
     try:
-        # Получаем токен из cookie вместо заголовка Authorization
         token = request.cookies.get("access_token")
+
+        # Если токен пришёл как байты, преобразуем в строку
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+            logger.info(f"get_current_user: token decoded from bytes")
 
         if not token:
             logger.warning("No access token in cookies")
             raise HTTPException(status_code=401, detail="Not authenticated")
 
-        logger.info(f"Token from cookie: {token[:20]}...")  # Отладка
+        token = token.strip()
+
+        # Дополнительная проверка: если токен всё ещё начинается с "b'" и заканчивается "'", удаляем
+        # Это может случиться, если cookie была установлена как repr(bytes)
+        if token.startswith("b'") and token.endswith("'"):
+            token = token[2:-1]
+            logger.info("get_current_user: stripped b' literal from token")
+
+        logger.info(f"Token from cookie (first 50 chars): {token[:50]}...")
 
         payload = decode_token_with_key_rotation(token, token_type="access", verify=True)
 
@@ -681,7 +701,6 @@ async def get_current_user(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Проверка блокировки аккаунта
         if user.locked_until and user.locked_until > datetime.now(timezone.utc):
             raise HTTPException(status_code=403, detail="Account locked")
 
@@ -691,7 +710,7 @@ async def get_current_user(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in get_current_user: {e}")
+        logger.error(f"Unexpected error in get_current_user: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Authentication error")
 
 async def get_current_user_optional(

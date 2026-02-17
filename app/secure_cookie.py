@@ -6,8 +6,11 @@
 
 from .config import Config
 from fastapi import Response
+import logging
 
-is_production = Config.ENVIRONMENT
+logger = logging.getLogger(__name__)
+
+is_production = Config.ENVIRONMENT == 'production'
 
 def create_secure_cookie(response: Response, name: str, value: str, max_age: int):
     """
@@ -35,6 +38,9 @@ def create_secure_cookie(response: Response, name: str, value: str, max_age: int
         >>> create_secure_cookie(response, "access_token", "jwt-token", 3600)
         # В production установятся флаги: HttpOnly, Secure, SameSite=Lax
     """
+
+    logger.info(f"Setting cookie {name} with secure={is_production}, samesite={'Lax' if is_production else 'None'}")
+
     response.set_cookie(
         key=name,
         value=value,
