@@ -10,7 +10,7 @@
 :root {
     /* Основная цветовая гамма - фиолетово-синий градиент */
     --primary-start: #667eea;
-    --primary-end: #764ba2;
+    --primary-end: #924ba2;
     --primary-gradient: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
 
     /* Цвета фона */
@@ -112,8 +112,8 @@
 /* Темная тема через data-theme */
 [data-theme="dark"] {
     /* Основная цветовая гамма - темные фиолетовые тона */
-    --primary-start: #4c1d95;
-    --primary-end: #2e1065;
+    --primary-start: #6227bd;
+    --primary-end: #481c9a;
     --primary-gradient: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
 
     /* Цвета фона */
