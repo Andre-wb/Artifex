@@ -10,7 +10,7 @@ from .auth import get_current_user, get_current_user_optional
 
 from .database import get_db
 from .models import User, Subject, Lesson, Grade, TimetableTemplate
-from .auth import get_current_user
+from .auth import get_current_user, get_current_teacher_user
 from .schemas import (
     SubjectCreate, SubjectResponse,
     LessonCreate, LessonUpdate, LessonResponse,
@@ -273,7 +273,7 @@ async def get_grades(
         subject_id: Optional[int] = None,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-        current_user: User = Depends(get_current_user),
+        current_user: User = Depends(get_current_teacher_user),
         db: Session = Depends(get_db)
 ):
     query = db.query(Grade).filter(Grade.user_id == current_user.id)
@@ -287,31 +287,55 @@ async def get_grades(
 
     return query.order_by(Grade.date.desc()).all()
 
+from .auth import get_current_teacher_user
+
 @router.post("/api/grades", response_model=GradeResponse)
 async def create_grade(
         grade: GradeCreate,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_teacher_user)
 ):
-    db_grade = Grade(**grade.dict(), user_id=current_user.id)
+    lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Урок не найден")
+
+    student = db.query(User).filter(User.id == lesson.user_id).first()
+    if not student or student.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
+
+    db_grade = Grade(
+        user_id=lesson.user_id,
+        subject_id=lesson.subject_id,
+        lesson_id=grade.lesson_id,
+        value=grade.value,
+        weight=grade.weight,
+        date=grade.date,
+        description=grade.description
+    )
     db.add(db_grade)
     db.commit()
     db.refresh(db_grade)
     return db_grade
 
+
 @router.put("/api/grades/{grade_id}", response_model=GradeResponse)
 async def update_grade(
         grade_id: int,
         grade_update: GradeUpdate,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_teacher_user)
 ):
-    db_grade = db.query(Grade).filter(
-        Grade.id == grade_id,
-        Grade.user_id == current_user.id
-    ).first()
+    db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
+
+    lesson = db_grade.lesson
+    if not lesson:
+        raise HTTPException(status_code=400, detail="Оценка не привязана к уроку")
+
+    student = db.query(User).filter(User.id == lesson.user_id).first()
+    if not student or student.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
     for key, value in grade_update.dict(exclude_unset=True).items():
         setattr(db_grade, key, value)
@@ -320,18 +344,24 @@ async def update_grade(
     db.refresh(db_grade)
     return db_grade
 
+
 @router.delete("/api/grades/{grade_id}")
 async def delete_grade(
         grade_id: int,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_teacher_user)
 ):
-    db_grade = db.query(Grade).filter(
-        Grade.id == grade_id,
-        Grade.user_id == current_user.id
-    ).first()
+    db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
+
+    lesson = db_grade.lesson
+    if not lesson:
+        raise HTTPException(status_code=400, detail="Оценка не привязана к уроку")
+
+    student = db.query(User).filter(User.id == lesson.user_id).first()
+    if not student or student.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
     db.delete(db_grade)
     db.commit()
