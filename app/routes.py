@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, Form, Response
+from fastapi import APIRouter, Request, Depends, HTTPException, Form, Response, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -39,10 +39,11 @@ from .create_csrf_cookie import create_csrf_cookie
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+app = FastAPI()
 
 logger = logging.getLogger(__name__)
 
-JWT_SECRET = os.getenv('SECRET_KEY', 'default-secret-key-change-in-production')
+JWT_SECRET = os.getenv('SECRET_KEY')
 serializer = URLSafeTimedSerializer(JWT_SECRET)
 
 is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONMENT') else False
@@ -61,10 +62,6 @@ async def timetable(request: Request):
 @router.get("/rating", response_class=HTMLResponse)
 async def rating(request: Request):
     return templates.TemplateResponse("rating.html", {"request": request})
-
-@router.get("/profile", response_class=HTMLResponse)
-async def profile(request: Request):
-    return templates.TemplateResponse("profile.html", {"request": request})
 
 @router.get("/diary-page", response_class=HTMLResponse)
 async def diary_redirect():

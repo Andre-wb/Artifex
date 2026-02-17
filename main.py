@@ -4,13 +4,15 @@
 маршрутов (роутов) и инициализацию Web Application Firewall (WAF).
 """
 
-from fastapi import FastAPI
+from fastapi.exception_handlers import http_exception_handler
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from app.routes import router
 from app.waf import setup_waf, DEFAULT_WAF_CONFIG
 import logging
 from app.auth import key_manager
 from app.routes_diary import router as diary_router
+from fastapi.templating import Jinja2Templates
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -21,6 +23,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Подключаем основной роутер с эндпоинтами приложения
 app.include_router(router)
 app.include_router(diary_router)
+
+templates = Jinja2Templates(directory="templates")
 
 # Настройка базового логирования
 logging.basicConfig(
@@ -47,3 +51,13 @@ key_manager.initialize()
 
 if key_manager.should_rotate_keys():
     key_manager.rotate_keys()
+
+@app.exception_handler(HTTPException)
+async def unauthorized_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 401:
+        return templates.TemplateResponse(
+            "not_authenticated.html",
+            {"request": request},
+            status_code=401
+        )
+    return await http_exception_handler(request, exc)
