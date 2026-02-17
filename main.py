@@ -13,6 +13,7 @@ import logging
 from app.auth import key_manager
 from app.routes_diary import router as diary_router
 from fastapi.templating import Jinja2Templates
+from app.routes_gamification import router as gamification_router
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -63,3 +64,7 @@ async def unauthorized_exception_handler(request: Request, exc: HTTPException):
             status_code=401
         )
     return await http_exception_handler(request, exc)
+
+app.include_router(router)
+app.include_router(diary_router)
+app.include_router(gamification_router)
