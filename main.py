@@ -16,6 +16,7 @@ from fastapi.templating import Jinja2Templates
 from app.routes_gamification import router as gamification_router
 from app.routes_chat import router as chat_router
 from app.routes_mood import router as mood_router
+from app.routes_academic import router as academic_router
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -28,6 +29,7 @@ app.include_router(router)
 app.include_router(diary_router)
 app.include_router(chat_router)
 app.include_router(mood_router)
+app.include_router(academic_router)
 
 templates = Jinja2Templates(directory="templates")
 app.state.templates = templates

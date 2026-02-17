@@ -102,7 +102,9 @@ class Grade(Base):
     date = Column(Date, nullable=False)
     description = Column(String(200), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    term_id = Column(Integer, ForeignKey('academic_terms.id'), nullable=True)
 
+    term = relationship("AcademicTerm")
     user = relationship("User", back_populates="grades")
     subject = relationship("Subject", back_populates="grades")
     lesson = relationship("Lesson", back_populates="grades")
@@ -205,9 +207,39 @@ class MoodEntry(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    mood = Column(String(10), nullable=False)          # happy, neutral, sad
-    time_of_day = Column(String(10), nullable=False)   # morning, afternoon, evening
+    mood = Column(String(10), nullable=False)
+    time_of_day = Column(String(10), nullable=False)
     comment = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", backref="mood_entries")
+
+class AcademicTerm(Base):
+    __tablename__ = 'academic_terms'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False)
+    term_type = Column(String(20), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    school_year = Column(String(9), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    final_grades = relationship("FinalGrade", back_populates="term")
+
+class FinalGrade(Base):
+    __tablename__ = 'final_grades'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    subject_id = Column(Integer, ForeignKey('subjects.id'), nullable=False)
+    term_id = Column(Integer, ForeignKey('academic_terms.id'), nullable=False)
+    value = Column(Integer, nullable=True)
+    calculated_from = Column(String(20), default='auto')
+    comment = Column(String(200), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", backref="final_grades")
+    subject = relationship("Subject", backref="final_grades")
+    term = relationship("AcademicTerm", back_populates="final_grades")

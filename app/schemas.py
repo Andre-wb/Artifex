@@ -6,7 +6,6 @@ from datetime import datetime
 from .security import validate_password
 from enum import Enum
 
-# Forward references для решения циклических зависимостей
 GradeResponse = ForwardRef('GradeResponse')
 LessonResponse = ForwardRef('LessonResponse')
 
@@ -318,6 +317,52 @@ class MoodAdviceRequest(BaseModel):
 
 class MoodAdviceResponse(BaseModel):
     advice: str
+
+class AcademicTermBase(BaseModel):
+    name: str
+    term_type: str
+    start_date: date
+    end_date: date
+    school_year: str
+
+class AcademicTermCreate(AcademicTermBase):
+    pass
+
+class AcademicTermOut(AcademicTermBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FinalGradeBase(BaseModel):
+    user_id: int
+    subject_id: int
+    term_id: int
+    value: Optional[int] = None
+    comment: Optional[str] = None
+
+class FinalGradeCreate(FinalGradeBase):
+    pass
+
+class FinalGradeUpdate(BaseModel):
+    value: Optional[int] = None
+    comment: Optional[str] = None
+
+class FinalGradeOut(FinalGradeBase):
+    id: int
+    calculated_from: str
+    created_at: datetime
+    updated_at: datetime
+    subject: SubjectResponse
+    term: AcademicTermOut
+
+    class Config:
+        from_attributes = True
+
+class TermGradeRequest(BaseModel):
+    term_id: int
+    subject_id: Optional[int] = None
 
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()
