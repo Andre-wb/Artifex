@@ -25,6 +25,7 @@ app.include_router(router)
 app.include_router(diary_router)
 
 templates = Jinja2Templates(directory="templates")
+app.state.templates = templates
 
 # Настройка базового логирования
 logging.basicConfig(

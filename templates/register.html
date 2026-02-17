@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Регистрация | BorisRent{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  <h2 class="login-header">Регистрация</h2>
+
+  <form method="POST" novalidate>
+
+    <div class="form-group">
+      <label for="username">Имя пользователя</label>
+      <input type="text" id="username" name="username" class="input"
+             value="{{ username or '' }}"
+             required
+             minlength="3"
+             maxlength="30"
+             pattern="[a-zA-Z0-9_]+"
+             title="Только буквы, цифры и подчеркивания (3-30 символов)">
+      {% if error and 'username' in error %}
+      <span class="error">{{ error.username }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" class="input"
+             value="{{ email or '' }}"
+             required
+             title="Введите корректный email адрес">
+      {% if error and 'email' in error %}
+      <span class="error">{{ error.email }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="phone">Телефон</label>
+      <input type="tel" id="phone" name="phone" class="input"
+             value="{{ phone or '' }}"
+             required
+             pattern="[\+\d\s\-\(\)]+"
+             title="Пример: +7 999 123-45-67 или 8 999 123-45-67">
+      {% if error and 'phone' in error %}
+      <span class="error">{{ error.phone }}</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" class="input"
+             required
+             minlength="12"
+             maxlength="128"
+             oninput="checkPasswordStrength(this.value)">
+      {% if error and 'password' in error %}
+      <span class="error">{{ error.password }}</span>
+      {% endif %}
+
+      <div class="password-strength" id="password-strength" style="display: none;">
+        <div class="strength-meter">
+          <div class="strength-fill" id="strength-fill"></div>
+        </div>
+        <div class="strength-text" id="strength-text"></div>
+      </div>
+
+      <div class="password-requirements">
+        <strong>Требования к паролю:</strong>
+        <ul class="requirements-list">
+          <li>Не менее 12 символов</li>
+          <li>Заглавные и строчные буквы</li>
+          <li>Минимум одна цифра (0-9)</li>
+          <li>Минимум один специальный символ (!@#$%^&* и т.д.)</li>
+          <li>Не должен содержать ваше имя или email</li>
+          <li>Не должен быть простым (password, 123456 и т.д.)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="confirm">Подтвердите пароль</label>
+      <input type="password" id="confirm" name="confirm" class="input" required>
+      {% if error and 'confirm' in error %}
+      <span class="error">{{ error.confirm }}</span>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="button-login">Зарегистрироваться</button>
+  </form>
+
+  {% if error and error is string %}
+  <ul class="error-list">
+    <li>{{ error }}</li>
+  </ul>
+  {% endif %}
+
+  {% if error and error is mapping and error.general %}
+  <ul class="error-list">
+    <li>{{ error.general }}</li>
+  </ul>
+  {% endif %}
+
+  {% if success %}
+  <ul class="success-list">
+    <li>{{ success }}</li>
+  </ul>
+  {% endif %}
+
+  <p class="register-text">
+    Уже есть аккаунт?
+    <a href="/login" class="register-link">Войти</a>
+  </p>
+</div>
+{% endblock %}
