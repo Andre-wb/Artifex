@@ -42,7 +42,8 @@ waf_config = {
     'max_content_length': 10 * 1024 * 1024,
     'whitelist_ips': ['127.0.0.1', '000.000.00.00'],
     'enable_captcha': True,
-    'log_level': 'INFO'
+    'log_level': 'INFO',
+    'safe_params': ['csrf_token', '_csrf', 'csrfmiddlewaretoken', 'authenticity_token']
 }
 
 # Инициализация WAF

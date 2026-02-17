@@ -277,6 +277,7 @@ class WAFEngine:
             - max_content_length: макс. размер тела запроса (байт)
             - whitelist_ips: список IP для белого списка
         """
+        self.safe_params = set(self.config.get('safe_params', ['csrf_token', '_csrf', 'csrfmiddlewaretoken']))
         self.config = config or {}
         self.rules = WAFSignature.get_all_rules()
         self.ip_blacklist: Set[str] = set()           # постоянно заблокированные IP (например, из админки)
@@ -508,6 +509,11 @@ class WAFEngine:
         Возвращает список словарей с описанием каждого срабатывания.
         Значение обрезается до 100 символов в отчёте для предотвращения захламления логов.
         """
+
+        # Игнорируем csrf токен
+        if param_name in self.safe_params:
+            return []
+
         findings = []
         value_str = str(param_value)   # преобразуем в строку для поиска
 
