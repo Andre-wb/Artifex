@@ -111,21 +111,19 @@ async def register_page(request: Request):
         TemplateResponse: отрендеренный шаблон register.html с CSRF-токеном в форме и cookie.
     """
     cookie_token, form_token = generate_double_csrf_token()
-
     request.state.csrf_token = cookie_token
-    request.state._csrf_cookie_token = cookie_token
-
-    logger.debug(f"GET /register: Сгенерированы токены. Cookie: {cookie_token[:10]}..., Form: {form_token[:20]}...")
-
-    response = request.app.state.templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "register.html",
         {
             "request": request,
-            "csrf_token": form_token
+            "csrf_token": form_token,
+            "school": "",
+            "grade": "",
+            "is_teacher": False
         }
     )
-
     create_csrf_cookie(response, cookie_token)
+    return response
 
     return response
 
@@ -145,8 +143,11 @@ async def register_user(
         phone = data["phone"]
         password = data["password"]
         confirm = data["confirm"]
+        school = data.get("school")
+        grade = data.get("grade")
+        is_teacher = data.get("is_teacher") == "true"
 
-        if not all([username, email, phone, password, confirm]):
+        if not all([username, email, phone, password, confirm, school, grade, is_teacher]):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
                 "request": request,
@@ -299,7 +300,10 @@ async def register_user(
                 is_admin=False,
                 created_at=datetime.utcnow(),
                 locked_until=None,
-                failed_login_attempts=0
+                failed_login_attempts=0,
+                is_teacher=is_teacher,
+                school=school,
+                grade=grade
             )
             user.set_password(password)
 
@@ -369,6 +373,9 @@ async def register_user(
                 "username": username,
                 "email": email,
                 "phone": phone,
+                "school": school,
+                "grade": grade,
+                "is_teacher": is_teacher,
                 "csrf_token": new_form_token
             })
             create_csrf_cookie(response, new_cookie_token)

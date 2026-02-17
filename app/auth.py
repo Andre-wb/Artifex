@@ -797,3 +797,8 @@ def verify_service_token(token: str, required_scopes: Optional[List[str]] = None
     except Exception as e:
         logger.error(f"Service token verification error: {e}")
         raise HTTPException(status_code=401, detail="Service token verification failed")
+
+async def get_current_teacher_user(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_teacher:
+        raise HTTPException(status_code=403, detail="Требуется роль учителя")
+    return current_user

@@ -15,6 +15,10 @@ class UserCreate(BaseModel):
     phone: str
     password: str
     confirm: str
+    is_teacher: bool = False
+    school: str
+    grade: Optional[str] = None
+
     class Config:
         extra = 'forbid'
 
@@ -36,6 +40,12 @@ class UserCreate(BaseModel):
         is_valid, error_message = validate_password(v)
         if not is_valid:
             raise ValueError(error_message)
+        return v
+
+    @validator('grade')
+    def validate_grade(cls, v, values):
+        if not values.get('is_teacher') and not v:
+            raise ValueError('Класс обязателен для ученика')
         return v
 
 class UserLogin(BaseModel):
@@ -216,6 +226,41 @@ class HomeworkHelpRequest(BaseModel):
 class AIRequest(BaseModel):
     lesson_id: Optional[int] = None
     text: Optional[str] = None
+
+class GroupCreate(BaseModel):
+    name: str
+    school: Optional[str] = None
+    expires_in_days: Optional[int] = 30
+
+
+class GroupOut(BaseModel):
+    id: int
+    name: str
+    school: Optional[str]
+    invite_code: str
+    expires_at: Optional[datetime]
+    is_active: bool
+    created_at: datetime
+    members_count: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
+class GroupMemberOut(BaseModel):
+    user_id: int
+    username: str
+    email: str
+    school: Optional[str]
+    grade: Optional[str]
+    joined_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GroupJoinRequest(BaseModel):
+    invite_code: str
 
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()
