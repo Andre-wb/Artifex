@@ -17,6 +17,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     locked_until = Column(DateTime, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
+    xp = Column(Integer, default=0, nullable=False)
+    level = Column(Integer, default=1, nullable=False)
+    league = Column(String(20), default='Bronze', nullable=False)
+    streak_days = Column(Integer, default=0, nullable=False)
+    last_streak_date = Column(Date, nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -29,6 +34,7 @@ class User(Base):
     lessons = relationship("Lesson", back_populates="user", cascade="all, delete-orphan")
     grades = relationship("Grade", back_populates="user", cascade="all, delete-orphan")
     timetable_templates = relationship("TimetableTemplate", back_populates="user", cascade="all, delete-orphan")
+    achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
 
 class RefreshToken(Base):
     __tablename__ = 'refresh_tokens'
@@ -71,6 +77,10 @@ class Lesson(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    student_completed = Column(Boolean, default=False, nullable=False)
+    student_completed_at = Column(DateTime, nullable=True)
+    teacher_confirmed = Column(Boolean, default=False, nullable=False)
+    teacher_confirmed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="lessons")
     subject = relationship("Subject", back_populates="lessons")
@@ -107,3 +117,29 @@ class TimetableTemplate(Base):
 
     user = relationship("User", back_populates="timetable_templates")
     subject = relationship("Subject")
+
+class Achievement(Base):
+    __tablename__ = 'achievements'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(String(255), nullable=False)
+    condition_type = Column(String(50), nullable=False)
+    condition_value = Column(Integer, nullable=False)
+    icon = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Связь с пользователями
+    users = relationship("UserAchievement", back_populates="achievement", cascade="all, delete-orphan")
+
+
+class UserAchievement(Base):
+    __tablename__ = 'user_achievements'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    achievement_id = Column(Integer, ForeignKey('achievements.id'), nullable=False)
+    earned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", back_populates="achievements")
+    achievement = relationship("Achievement", back_populates="users")

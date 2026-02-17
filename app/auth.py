@@ -707,6 +707,19 @@ def get_current_user_optional(
         raise
     return None
 
+async def get_current_admin_user(
+        current_user: User = Depends(get_current_user)
+) -> User:
+    """
+    Возвращает текущего пользователя, если он является администратором (учителем).
+    Иначе выбрасывает исключение 403.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав. Требуется роль учителя."
+        )
+    return current_user
 
 def verify_service_token(token: str, required_scopes: Optional[List[str]] = None) -> dict:
     """Проверяет service token (используется вне контекста FastAPI, например, в middleware).

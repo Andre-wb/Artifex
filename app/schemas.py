@@ -157,6 +157,59 @@ class TimetableTemplateResponse(TimetableTemplateBase):
     class Config:
         from_attributes = True
 
+class UserAchievementOut(BaseModel):
+    id: int
+    achievement_id: int
+    achievement_name: str
+    achievement_description: str
+    achievement_icon: Optional[str]
+    earned_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GamificationProfileOut(BaseModel):
+    xp: int
+    level: int
+    league: str
+    streak_days: int
+    recent_achievements: List[UserAchievementOut]
+
+    class Config:
+        from_attributes = True
+
+
+class AchievementOut(BaseModel):
+    id: int
+    name: str
+    description: str
+    condition_type: str
+    condition_value: int
+    icon: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class AchievementWithEarnedOut(AchievementOut):
+    earned: bool
+    earned_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardEntryOut(BaseModel):
+    user_id: int
+    username: str
+    xp: int
+    level: int
+    league: str
+
+    class Config:
+        from_attributes = True
+
 # Обновляем ссылки
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()
