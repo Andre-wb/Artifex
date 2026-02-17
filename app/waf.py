@@ -504,28 +504,22 @@ class WAFEngine:
             'client_ip': ip
         }
 
-    def _check_parameter(self, param_name: str, param_value: Any) -> List[Dict]:
-        """
-        Применяет все правила WAF к имени параметра и его значению.
-        Возвращает список словарей с описанием каждого срабатывания.
-        Значение обрезается до 100 символов в отчёте для предотвращения захламления логов.
-        """
+    def _check_parameter(self, param_name: str, param_value: str) -> List[Dict]:
+        """Проверить параметр запроса"""
+        findings = []
 
-        # Игнорируем csrf токен
-        if param_name in self.safe_params:
+        value_str = str(param_value)
+
+        if param_name.lower() in ['csrf_token', 'csrf-token', '_csrf']:
             return []
 
-        findings = []
-        value_str = str(param_value)   # преобразуем в строку для поиска
-
         for rule in self.rules:
-            # Проверяем как имя, так и значение параметра
             if rule.pattern.search(param_name) or rule.pattern.search(value_str):
                 findings.append({
                     'rule_id': rule.rule_id,
                     'description': f'{rule.description} в параметре {param_name}',
                     'severity': rule.severity,
-                    'value': value_str[:100] + ('...' if len(value_str) > 100 else '')
+                    'value': value_str[:100] if len(value_str) > 100 else value_str
                 })
                 rule.trigger_count += 1
                 rule.last_triggered = datetime.now(timezone.utc)
@@ -533,18 +527,14 @@ class WAFEngine:
         return findings
 
     def _check_request_body(self, body: str, content_type: str) -> List[Dict]:
-        """
-        Проверяет тело запроса в зависимости от типа содержимого.
-        Для JSON рекурсивно обходит структуру, для form-urlencoded разбирает параметры,
-        для остальных типов применяет правила к сырой строке.
-        """
         findings = []
+        parsed = False
 
-        # JSON
         if 'application/json' in content_type:
             try:
-                parsed = json.loads(body)
-                json_findings = self._check_json_structure(parsed)
+                parsed = True
+                data = json.loads(body)
+                json_findings = self._check_json_structure(data)
                 findings.extend(json_findings)
             except json.JSONDecodeError:
                 findings.append({
@@ -553,33 +543,34 @@ class WAFEngine:
                     'severity': 'medium'
                 })
 
-        # application/x-www-form-urlencoded
         elif 'application/x-www-form-urlencoded' in content_type:
             import urllib.parse
             try:
-                parsed = urllib.parse.parse_qs(body)
-                for key, values in parsed.items():
+                parsed = True
+                parsed_data = urllib.parse.parse_qs(body)
+                for key, values in parsed_data.items():
+                    if key.lower() in ['csrf_token', 'csrf-token', '_csrf']:
+                        continue
                     for value in values:
                         param_findings = self._check_parameter(key, value)
                         findings.extend(param_findings)
-            except Exception:
-                # Игнорируем ошибки парсинга, просто пропускаем
+            except:
                 pass
 
-        # Для всех остальных типов (XML, plain text и т.д.) проверяем сырую строку
-        # Это может давать ложные срабатывания, но лучше перебдеть
-        for rule in self.rules:
-            if rule.pattern.search(body):
-                findings.append({
-                    'rule_id': rule.rule_id,
-                    'description': f'{rule.description} в теле запроса',
-                    'severity': rule.severity,
-                    'value': body[:100] + ('...' if len(body) > 100 else '')
-                })
-                rule.trigger_count += 1
-                rule.last_triggered = datetime.now(timezone.utc)
+        if not parsed:
+            for rule in self.rules:
+                if rule.pattern.search(body):
+                    findings.append({
+                        'rule_id': rule.rule_id,
+                        'description': f'{rule.description} в теле запроса',
+                        'severity': rule.severity,
+                        'value': body[:100] if len(body) > 100 else body
+                    })
+                    rule.trigger_count += 1
+                    rule.last_triggered = datetime.now(timezone.utc)
 
         return findings
+
 
     def _check_json_structure(self, data: Any, path: str = "") -> List[Dict]:
         """
