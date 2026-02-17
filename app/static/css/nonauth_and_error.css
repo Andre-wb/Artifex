@@ -1,0 +1,344 @@
+/* Стили для страницы "Требуется авторизация" */
+
+/* Основной контейнер */
+.auth-required-container {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl, 20px);
+    animation: fadeIn var(--transition-default, 0.5s);
+}
+
+/* Контентный блок */
+.auth-content {
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    padding: var(--spacing-xxxl, 50px) var(--spacing-xxl, 40px);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-card, 32px);
+    box-shadow: var(--shadow-card, 0 20px 50px rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--border-card, rgba(255, 255, 255, 0.5));
+    transform: translateY(0);
+    transition: transform var(--transition-default, 0.3s), box-shadow var(--transition-default, 0.3s);
+}
+
+.auth-content:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-card-hover, 0 30px 60px rgba(102, 126, 234, 0.15));
+}
+
+/* Иконка замка */
+.lock-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--spacing-xxl, 24px);
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: float 3s ease-in-out infinite;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.lock-icon img {
+    width: 40px;
+    height: 40px;
+    filter: brightness(0) invert(1);
+}
+
+/* Заголовок */
+.auth-title {
+    font-size: 36px;
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: -0.02em;
+    margin-bottom: var(--spacing-lg, 16px);
+    color: var(--text-primary, #1e293b);
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Описание */
+.auth-description {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text-secondary, #64748b);
+    margin-bottom: var(--spacing-xxxl, 40px);
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Группа кнопок */
+.auth-buttons {
+    display: flex;
+    gap: var(--spacing-lg, 16px);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Кнопки */
+.auth-button {
+    padding: 14px 32px;
+    border-radius: 100px;
+    font-size: 16px;
+    font-weight: var(--font-weight-medium, 500);
+    text-decoration: none;
+    transition: all var(--transition-default, 0.3s);
+    letter-spacing: -0.01em;
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+}
+
+/* Кнопка входа */
+.auth-button.primary {
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.3));
+}
+
+.auth-button.primary:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-card-hover, 0 8px 24px rgba(102, 126, 234, 0.4));
+}
+
+.auth-button.primary:active {
+    transform: scale(0.98);
+}
+
+/* Кнопка регистрации */
+.auth-button.secondary {
+    background: transparent;
+    color: var(--primary-start, #667eea);
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.auth-button.secondary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 100px;
+    padding: 2px;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    transition: opacity var(--transition-default, 0.3s);
+}
+
+.auth-button.secondary:hover {
+    transform: scale(1.05);
+}
+
+.auth-button.secondary:hover::before {
+    opacity: 1;
+}
+
+.auth-button.secondary:active {
+    transform: scale(0.98);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+    }
+}
+
+/* Темная тема */
+[data-theme="dark"] .auth-content {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--border-card, rgba(255,255,255,0.1));
+}
+
+[data-theme="dark"] .auth-title {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-theme="dark"] .auth-description {
+    color: var(--text-secondary, #94a3b8);
+}
+
+[data-theme="dark"] .lock-icon {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+}
+
+[data-theme="dark"] .auth-button.primary {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+}
+
+[data-theme="dark"] .auth-button.secondary {
+    color: var(--primary-start, #4c1d95);
+}
+
+[data-theme="dark"] .auth-button.secondary::before {
+    background: var(--primary-gradient, linear-gradient(135deg, #4c1d95 0%, #2e1065 100%));
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .auth-content {
+        padding: var(--spacing-xxl, 40px) var(--spacing-xl, 30px);
+    }
+
+    .auth-title {
+        font-size: 32px;
+    }
+
+    .auth-description {
+        font-size: 16px;
+        margin-bottom: var(--spacing-xxl, 30px);
+    }
+
+    .lock-icon {
+        width: 70px;
+        height: 70px;
+        margin-bottom: var(--spacing-xl, 20px);
+    }
+
+    .lock-icon img {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-content {
+        padding: var(--spacing-xxl, 35px) var(--spacing-xl, 20px);
+        border-radius: var(--border-radius-card, 24px);
+    }
+
+    .auth-title {
+        font-size: 28px;
+    }
+
+    .auth-description {
+        font-size: 15px;
+        max-width: 260px;
+    }
+
+    .auth-buttons {
+        flex-direction: column;
+        gap: var(--spacing-md, 12px);
+    }
+
+    .auth-button {
+        width: 100%;
+        text-align: center;
+        padding: 16px;
+    }
+
+    .lock-icon {
+        width: 60px;
+        height: 60px;
+    }
+
+    .lock-icon img {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+@media (max-width: 360px) {
+    .auth-content {
+        padding: var(--spacing-xl, 25px) var(--spacing-lg, 16px);
+    }
+
+    .auth-title {
+        font-size: 24px;
+    }
+
+    .auth-description {
+        font-size: 14px;
+    }
+}
+
+/* Дополнительные эффекты */
+.auth-content::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    border-radius: calc(var(--border-radius-card, 32px) + 2px);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity var(--transition-default, 0.3s);
+    pointer-events: none;
+}
+
+.auth-content:hover::before {
+    opacity: 0.2;
+}
+
+/* Анимация появления контента */
+.auth-content > * {
+    animation: slideUp var(--transition-default, 0.5s) ease-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.auth-content .lock-icon {
+    animation: slideUp var(--transition-default, 0.5s) 0.1s ease-out forwards, float 3s ease-in-out 0.5s infinite;
+}
+
+.auth-content .auth-title {
+    animation: slideUp var(--transition-default, 0.5s) 0.2s ease-out forwards;
+}
+
+.auth-content .auth-description {
+    animation: slideUp var(--transition-default, 0.5s) 0.3s ease-out forwards;
+}
+
+.auth-content .auth-buttons {
+    animation: slideUp var(--transition-default, 0.5s) 0.4s ease-out forwards;
+}
+
+@keyframes slideUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
