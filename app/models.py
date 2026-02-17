@@ -142,3 +142,15 @@ class UserAchievement(Base):
 
     user = relationship("User", back_populates="achievements")
     achievement = relationship("Achievement", back_populates="users")
+
+class TwoFactorCode(Base):
+    __tablename__ = 'two_factor_codes'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    code_hash = Column(String(128), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="two_factor_codes")

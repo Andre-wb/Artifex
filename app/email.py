@@ -147,3 +147,25 @@ async def send_confirmation_email(user_email: str, token: str, request: Request)
     except Exception as e:
         logger.error(f"Ошибка отправки email: {e}")
         return False
+
+async def send_email(recipient: str, subject: str, html_content: str) -> bool:
+    """
+    Отправляет email через SMTP.
+    Возвращает True, если отправка успешна.
+    """
+    smtp_config = Config.get_smtp_config()
+    msg = MIMEMultipart()
+    msg['From'] = smtp_config['SMTP_USERNAME']
+    msg['To'] = recipient
+    msg['Subject'] = subject
+    msg.attach(MIMEText(html_content, 'html'))
+
+    try:
+        with smtplib.SMTP(smtp_config['SMTP_SERVER'], smtp_config['SMTP_PORT']) as server:
+            server.starttls()
+            server.login(smtp_config['SMTP_USERNAME'], smtp_config['SMTP_PASSWORD'])
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка отправки email: {e}")
+        return False
