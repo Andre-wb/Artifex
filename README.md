@@ -6,7 +6,7 @@ Artifex – это современное веб-приложение для ш�
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red)
 ![JWT](https://img.shields.io/badge/JWT-RS256-orange)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+![License](https://img.shields.io/badge/license-Apache-lightgrey)
 
 ---
 
