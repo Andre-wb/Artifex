@@ -691,6 +691,7 @@ nav a.active {
 
     .desktop-nav.show {
         display: flex;
+        background: var(--bg-card);
     }
 
     .desktop-nav a {
