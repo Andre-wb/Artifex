@@ -19,12 +19,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, bindparam
 from sqlalchemy.exc import IntegrityError
+import asyncio
 
 from app.config import Config
 from app.secure_cookie import create_secure_cookie
 from app.email import (
     safe_form_data, send_confirmation_email, confirm_token,
-    extract_form_data, generate_confirmation_token
+    extract_form_data, generate_confirmation_token,
+    verify_reset_token, generate_reset_token, send_password_reset_email
 )
 from app.database import get_db
 from app.models import User, RefreshToken, TwoFactorCode
@@ -798,3 +800,244 @@ async def resend_2fa(request: Request, db: Session = Depends(get_db)):
         return JSONResponse({"success": True})
     else:
         return JSONResponse({"success": False, "error": "Ошибка отправки письма"}, status_code=500)
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+@timing_safe_endpoint
+@rate_limit_safe(max_calls=5, window=60)
+@validate_input_safe
+async def forgot_password_page(request: Request):
+    """
+    Отображает страницу для ввода email для сброса пароля.
+    """
+    cookie_token, form_token = generate_double_csrf_token()
+    response = templates.TemplateResponse(
+        "forgot_password.html",
+        {
+            "request": request,
+            "csrf_token": form_token
+        }
+    )
+    create_csrf_cookie(response, cookie_token)
+    return response
+
+
+@router.post("/forgot-password")
+@timing_safe_endpoint
+@rate_limit_safe(max_calls=3, window=60)
+@validate_input_safe
+async def forgot_password(request: Request, db: Session = Depends(get_db)):
+    """
+    Обрабатывает запрос на сброс пароля.
+    Отправляет письмо со ссылкой для сброса, если email существует в БД.
+    В целях безопасности не сообщаем, найден email или нет.
+    """
+    try:
+        form_data = await safe_form_data(request)
+        data = extract_form_data(form_data, ["email"])
+        email = data.get("email", "").strip()
+
+        # Базовая валидация email
+        if not email or '@' not in email:
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = templates.TemplateResponse(
+                "forgot_password.html",
+                {
+                    "request": request,
+                    "error": "Введите корректный email",
+                    "csrf_token": new_form_token
+                }
+            )
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # Ищем пользователя
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            token = generate_reset_token(email)
+            await send_password_reset_email(email, token, request)
+            logger.info(f"Ссылка для сброса пароля отправлена на {email}")
+        else:
+            # Задержка для защиты от перебора email
+            await asyncio.sleep(1)
+            logger.info(f"Запрос сброса пароля для несуществующего email: {email}")
+
+        # В любом случае показываем одинаковое сообщение
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = templates.TemplateResponse(
+            "message.html",
+            {
+                "request": request,
+                "title": "Проверьте почту",
+                "message": "Если указанный email зарегистрирован, мы отправили на него инструкции по сбросу пароля.",
+                "csrf_token": new_form_token
+            }
+        )
+        create_csrf_cookie(response, new_cookie_token)
+        return response
+
+    except Exception as e:
+        logger.error(f"Ошибка при запросе сброса пароля: {e}", exc_info=True)
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error": "Произошла внутренняя ошибка. Попробуйте позже.",
+                "csrf_token": new_form_token
+            },
+            status_code=500
+        )
+        create_csrf_cookie(response, new_cookie_token)
+        return response
+
+
+@router.get("/reset-password/{token}", response_class=HTMLResponse)
+@timing_safe_endpoint
+@rate_limit_safe(max_calls=5, window=60)
+@validate_input_safe
+async def reset_password_page(request: Request, token: str):
+    """
+    Отображает страницу для ввода нового пароля, если токен действителен.
+    """
+    email = verify_reset_token(token)
+    if not email:
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error": "Ссылка для сброса пароля недействительна или истекла."
+            },
+            status_code=400
+        )
+
+    cookie_token, form_token = generate_double_csrf_token()
+    response = templates.TemplateResponse(
+        "reset_password.html",
+        {
+            "request": request,
+            "token": token,
+            "csrf_token": form_token
+        }
+    )
+    create_csrf_cookie(response, cookie_token)
+    return response
+
+
+@router.post("/reset-password/{token}")
+@timing_safe_endpoint
+@rate_limit_safe(max_calls=3, window=60)
+@validate_input_safe
+async def reset_password(
+        request: Request,
+        token: str,
+        db: Session = Depends(get_db)
+):
+    """
+    Обрабатывает форму с новым паролем.
+    Проверяет токен, валидирует пароль и обновляет его в БД.
+    """
+    email = verify_reset_token(token)
+    if not email:
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error": "Ссылка для сброса пароля недействительна или истекла.",
+                "csrf_token": new_form_token
+            },
+            status_code=400
+        )
+        create_csrf_cookie(response, new_cookie_token)
+        return response
+
+    try:
+        form_data = await safe_form_data(request)
+        data = extract_form_data(form_data, ["password", "confirm"])
+        password = data["password"]
+        confirm = data["confirm"]
+
+        # Проверка совпадения паролей
+        if password != confirm:
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = templates.TemplateResponse(
+                "reset_password.html",
+                {
+                    "request": request,
+                    "token": token,
+                    "error": "Пароли не совпадают",
+                    "csrf_token": new_form_token
+                }
+            )
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # Валидация сложности пароля
+        is_valid, password_error = validate_password(password)
+        if not is_valid:
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = templates.TemplateResponse(
+                "reset_password.html",
+                {
+                    "request": request,
+                    "token": token,
+                    "error": password_error,
+                    "csrf_token": new_form_token
+                }
+            )
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # Находим пользователя по email
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            logger.error(f"Пользователь с email {email} не найден при сбросе пароля")
+            new_cookie_token, new_form_token = generate_double_csrf_token()
+            response = templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "error": "Произошла ошибка. Попробуйте снова.",
+                    "csrf_token": new_form_token
+                },
+                status_code=404
+            )
+            create_csrf_cookie(response, new_cookie_token)
+            return response
+
+        # Устанавливаем новый пароль
+        user.set_password(password)
+        db.query(RefreshToken).filter(RefreshToken.user_id == user.id).update(
+            {"revoked_at": datetime.utcnow()}
+        )
+        db.commit()
+
+        logger.info(f"Пароль успешно изменён для пользователя {user.id}")
+
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = templates.TemplateResponse(
+            "message.html",
+            {
+                "request": request,
+                "title": "Пароль изменён",
+                "message": "Ваш пароль успешно обновлён. Теперь вы можете войти с новым паролем.",
+                "csrf_token": new_form_token
+            }
+        )
+        create_csrf_cookie(response, new_cookie_token)
+        return response
+
+    except Exception as e:
+        logger.error(f"Ошибка при сбросе пароля: {e}", exc_info=True)
+        new_cookie_token, new_form_token = generate_double_csrf_token()
+        response = templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error": "Произошла внутренняя ошибка. Попробуйте позже.",
+                "csrf_token": new_form_token
+            },
+            status_code=500
+        )
+        create_csrf_cookie(response, new_cookie_token)
+        return response

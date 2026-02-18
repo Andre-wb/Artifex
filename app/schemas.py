@@ -372,5 +372,37 @@ class LoadWarningOut(BaseModel):
     is_read: bool
     created_at: datetime
 
+class GroupInfo(BaseModel):
+    """Информация о группе для ученика"""
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class SubjectAverageSimple(BaseModel):
+    """Средний балл по предмету для ученика (упрощённый)"""
+    subject_id: int
+    subject_name: str
+    average: float
+
+    class Config:
+        from_attributes = True
+
+
+class StudentOut(BaseModel):
+    """Модель для вывода информации об ученике (для учителя)"""
+    id: int
+    username: str
+    email: str
+    school: Optional[str]
+    grade: Optional[str]
+    groups: List[GroupInfo]
+    averages: List[SubjectAverageSimple]
+
+    class Config:
+        from_attributes = True
+
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()
