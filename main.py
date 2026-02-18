@@ -103,7 +103,7 @@ async def startup_event():
     if key_manager.should_rotate_keys():
         key_manager.rotate_keys()
 
-    start_bot()
+    # start_bot()
 
     logger.info("Telegram бот запущен")
     scheduler.add_job(

@@ -67,3 +67,5 @@ class Config:
     API_KEY = os.getenv("GROQ_API_KEY")
 
     YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")

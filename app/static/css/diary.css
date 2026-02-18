@@ -273,3 +273,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border-light, rgba(255,255,255,0.2));
 }
+.day-footer {
+    color: var(--text-primary, white);
+}
