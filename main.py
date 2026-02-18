@@ -30,18 +30,6 @@ app = FastAPI(title="Artifex - Дневник")
 # Монтируем директорию со статическими файлами (CSS, JS, изображения)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Подключаем основной роутер с эндпоинтами приложения
-app.include_router(router)
-app.include_router(diary_router)
-app.include_router(chat_router)
-app.include_router(mood_router)
-app.include_router(academic_router)
-app.include_router(warnings_router)
-app.include_router(reminder_router)
-
-templates = Jinja2Templates(directory="templates")
-app.state.templates = templates
-
 # Настройка базового логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -61,23 +49,70 @@ waf_config = {
     'safe_params': ['csrf_token', '_csrf', 'csrfmiddlewaretoken', 'authenticity_token']
 }
 
+# Создаем планировщик
 scheduler = AsyncIOScheduler()
 
 async def scheduled_load_analysis():
+    """Запланированная задача для анализа нагрузки всех пользователей"""
+    logger.info("Запуск запланированного анализа нагрузки для всех пользователей")
     db = SessionLocal()
-    run_load_analysis_for_all_users(db)
-    db.close()
+    try:
+        run_load_analysis_for_all_users(db)
+        logger.info("Анализ нагрузки успешно завершен")
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении анализа нагрузки: {e}")
+    finally:
+        db.close()
 
-scheduler.add_job(scheduled_load_analysis, CronTrigger(hour=20, minute=0))
-scheduler.start()
+# Инициализация при запуске приложения
+@app.on_event("startup")
+async def startup_event():
+    """Действия при запуске приложения"""
+    logger.info("Запуск приложения Artifex - Дневник")
 
-# Инициализация WAF
-# waf_engine = setup_waf(app, waf_config)
+    # Добавляем задачу в планировщик
+    scheduler.add_job(
+        scheduled_load_analysis,
+        CronTrigger(hour=20, minute=0),
+        id="daily_load_analysis",
+        replace_existing=True
+    )
 
-key_manager.initialize()
+    # Запускаем планировщик
+    scheduler.start()
+    logger.info("Планировщик задач запущен. Ежедневный анализ запланирован на 20:00")
 
-if key_manager.should_rotate_keys():
-    key_manager.rotate_keys()
+    # Инициализация WAF (раскомментируйте если нужно)
+    # waf_engine = setup_waf(app, waf_config)
+
+    # Инициализация ключей
+    key_manager.initialize()
+    if key_manager.should_rotate_keys():
+        key_manager.rotate_keys()
+
+    logger.info("Приложение успешно запущено")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Действия при остановке приложения"""
+    logger.info("Остановка приложения Artifex - Дневник")
+
+    # Останавливаем планировщик
+    scheduler.shutdown()
+    logger.info("Планировщик задач остановлен")
+
+# Подключаем все роутеры
+app.include_router(router)
+app.include_router(diary_router)
+app.include_router(chat_router)
+app.include_router(mood_router)
+app.include_router(academic_router)
+app.include_router(warnings_router)
+app.include_router(reminder_router)
+app.include_router(gamification_router)
+
+templates = Jinja2Templates(directory="templates")
+app.state.templates = templates
 
 @app.exception_handler(HTTPException)
 async def unauthorized_exception_handler(request: Request, exc: HTTPException):
@@ -88,7 +123,3 @@ async def unauthorized_exception_handler(request: Request, exc: HTTPException):
             status_code=401
         )
     return await http_exception_handler(request, exc)
-
-app.include_router(router)
-app.include_router(diary_router)
-app.include_router(gamification_router)
