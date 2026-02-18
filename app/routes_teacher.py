@@ -12,7 +12,8 @@ from typing import Optional, List
 from . import models, schemas
 from .auth import get_current_teacher_user
 from .database import get_db
-from .utils import generative_invite_code
+from .utils import generate_invite_code
+
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
 
@@ -28,7 +29,7 @@ async def create_group(
     Можно указать срок действия кода (expires_in_days).
     """
     while True:
-        code = generative_invite_code()
+        code = generate_invite_code()
         existing = db.query(models.Group).filter(models.Group.invite_code == code).first()
         if not existing:
             break
@@ -49,12 +50,21 @@ async def create_group(
     db.commit()
     db.refresh(group)
 
-    group_dict = {c.name: getattr(group, c.name) for c in group.__table__.columns}
-    group_dict["members_count"] = 0
+    # Создаем словарь для ответа
+    group_dict = {
+        "id": group.id,
+        "name": group.name,
+        "school": group.school,
+        "invite_code": group.invite_code,
+        "expires_at": group.expires_at,
+        "is_active": group.is_active,
+        "created_at": group.created_at,
+        "members_count": 0
+    }
     return group_dict
 
 
-@router.get("/groups", response_model=list[schemas.GroupOut])
+@router.get("/groups", response_model=List[schemas.GroupOut])
 async def get_my_groups(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
@@ -67,13 +77,21 @@ async def get_my_groups(
     result = []
     for g in groups:
         members_count = db.query(models.GroupMember).filter(models.GroupMember.group_id == g.id).count()
-        group_dict = {c.name: getattr(g, c.name) for c in g.__table__.columns}
-        group_dict["members_count"] = members_count
+        group_dict = {
+            "id": g.id,
+            "name": g.name,
+            "school": g.school,
+            "invite_code": g.invite_code,
+            "expires_at": g.expires_at,
+            "is_active": g.is_active,
+            "created_at": g.created_at,
+            "members_count": members_count
+        }
         result.append(group_dict)
     return result
 
 
-@router.get("/groups/{group_id}/members", response_model=list[schemas.GroupMemberOut])
+@router.get("/groups/{group_id}/members", response_model=List[schemas.GroupMemberOut])
 async def get_group_members(
         group_id: int,
         db: Session = Depends(get_db),
@@ -105,7 +123,7 @@ async def get_group_members(
     return result
 
 
-@router.get("/students", response_model=list[schemas.StudentOut])
+@router.get("/students", response_model=List[dict])
 async def get_my_students(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
@@ -131,29 +149,13 @@ async def get_my_students(
                 "name": m.group.name
             })
 
-        # Получаем статистику
-        from .routes_academic import calculate_final_grade
-        from .models import Subject
-
-        subjects = db.query(Subject).all()
-        averages = []
-        for subject in subjects:
-            avg = calculate_final_grade(student.id, subject.id, None, db)
-            if avg:
-                averages.append({
-                    "subject_id": subject.id,
-                    "subject_name": subject.name,
-                    "average": avg
-                })
-
         result.append({
             "id": student.id,
             "username": student.username,
             "email": student.email,
             "school": student.school,
             "grade": student.grade,
-            "groups": groups,
-            "averages": averages
+            "groups": groups
         })
 
     return result
@@ -189,8 +191,53 @@ async def get_student_grades(
             "weight": grade.weight,
             "date": grade.date.isoformat(),
             "description": grade.description,
-            "subject": grade.subject.name,
+            "subject": grade.subject.name if grade.subject else "Неизвестно",
             "lesson_id": grade.lesson_id
+        })
+
+    return result
+
+
+@router.get("/student/{student_id}/averages")
+async def get_student_averages(
+        student_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_teacher_user)
+):
+    """
+    Возвращает средние оценки ученика по предметам.
+    """
+    student = db.query(models.User).filter(
+        models.User.id == student_id,
+        models.User.teacher_id == current_user.id,
+        models.User.is_teacher == False
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    subjects = db.query(models.Subject).all()
+    result = []
+
+    for subject in subjects:
+        grades = db.query(models.Grade).filter(
+            models.Grade.user_id == student_id,
+            models.Grade.subject_id == subject.id
+        ).all()
+
+        if grades:
+            total_weight = sum(g.weight for g in grades)
+            weighted_sum = sum(g.value * g.weight for g in grades)
+            average = weighted_sum / total_weight if total_weight > 0 else 0
+        else:
+            average = 0
+
+        result.append({
+            "subject_id": subject.id,
+            "subject_name": subject.name,
+            "average": round(average, 2),
+            "grades_count": len(grades),
+            "color": subject.color
         })
 
     return result
@@ -236,7 +283,7 @@ async def regenerate_code(
         raise HTTPException(status_code=404, detail="Группа не найдена")
 
     while True:
-        new_code = generative_invite_code()
+        new_code = generate_invite_code()
         existing = db.query(models.Group).filter(models.Group.invite_code == new_code).first()
         if not existing:
             break
@@ -278,8 +325,8 @@ async def get_pending_lessons(
         result.append({
             "lesson_id": lesson.id,
             "date": lesson.date.isoformat(),
-            "subject": lesson.subject.name,
-            "student_name": lesson.user.username,
+            "subject": lesson.subject.name if lesson.subject else "Неизвестно",
+            "student_name": lesson.user.username if lesson.user else "Неизвестно",
             "homework": lesson.homework,
             "attachments": [
                 {
@@ -289,50 +336,4 @@ async def get_pending_lessons(
                 } for att in lesson.attachments
             ]
         })
-    return result
-
-@router.get("/student/{student_id}/averages")
-async def get_student_averages(
-        student_id: int,
-        db: Session = Depends(get_db),
-        current_user: models.User = Depends(get_current_teacher_user)
-):
-    """
-    Возвращает средние оценки ученика по предметам.
-    """
-    student = db.query(models.User).filter(
-        models.User.id == student_id,
-        models.User.teacher_id == current_user.id,
-        models.User.is_teacher == False
-    ).first()
-
-    if not student:
-        raise HTTPException(status_code=404, detail="Ученик не найден")
-
-    from .routes_diary import get_averages
-    # Вызываем функцию из diary, передавая параметры
-    subjects = db.query(models.Subject).all()
-    result = []
-
-    for subject in subjects:
-        grades = db.query(models.Grade).filter(
-            models.Grade.user_id == student_id,
-            models.Grade.subject_id == subject.id
-        ).all()
-
-        if grades:
-            total_weight = sum(g.weight for g in grades)
-            weighted_sum = sum(g.value * g.weight for g in grades)
-            average = weighted_sum / total_weight if total_weight > 0 else 0
-        else:
-            average = 0
-
-        result.append({
-            "subject_id": subject.id,
-            "subject_name": subject.name,
-            "average": round(average, 2),
-            "grades_count": len(grades),
-            "color": subject.color
-        })
-
     return result
