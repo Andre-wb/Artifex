@@ -27,6 +27,7 @@ from app.routes_profile import router as profile_router
 from app.routes_pages import router as pages_router
 from app.routes_diary_api import router as diary_api_router
 from app.routes_ai import router as ai_router
+from app.routes_youtube import router as materials_router
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -118,6 +119,7 @@ app.include_router(profile_router)
 app.include_router(pages_router)
 app.include_router(diary_api_router)
 app.include_router(ai_router)
+app.include_router(materials_router)
 
 templates = Jinja2Templates(directory="templates")
 app.state.templates = templates

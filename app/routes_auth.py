@@ -34,7 +34,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 JWT_SECRET = os.getenv('SECRET_KEY')
-# serializer используется только внутри email.py, здесь не нужен
 
 is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONMENT') else False
 
