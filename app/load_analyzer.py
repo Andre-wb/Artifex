@@ -1,7 +1,9 @@
 import logging
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
+import asyncio
 
+from .database import SessionLocal
 from . import models
 from .ai_funcs import ask_support
 
@@ -102,3 +104,26 @@ def run_load_analysis_for_all_users(db: Session):
             analyze_user_load(user, db)
         except Exception as e:
             logger.error(f"Ошибка при анализе пользователя {user.id}: {e}")
+
+async def periodic_load_analysis(interval_minutes: int = 30):
+    """
+    Фоновая задача, запускающая анализ нагрузки всех пользователей каждые interval_minutes минут.
+    """
+    while True:
+        try:
+            logger.info("Запуск периодического анализа нагрузки...")
+            await asyncio.to_thread(run_load_analysis_sync)
+            logger.info("Анализ нагрузки завершён.")
+        except Exception as e:
+            logger.error(f"Ошибка в периодическом анализе нагрузки: {e}", exc_info=True)
+        await asyncio.sleep(interval_minutes * 60)
+
+def run_load_analysis_sync():
+    """
+    Синхронная обёртка, создающая сессию БД и вызывающая run_load_analysis_for_all_users.
+    """
+    db = SessionLocal()
+    try:
+        run_load_analysis_for_all_users(db)
+    finally:
+        db.close()
