@@ -120,7 +120,6 @@ SMTP_PASSWORD=your-app-password
 artifex/
 ├── app/                      # Основной пакет приложения
 │   ├── __init__.py
-│   ├── main.py               # Точка входа FastAPI
 │   ├── config.py             # Конфигурация из .env
 │   ├── database.py           # Подключение к БД, сессии
 │   ├── models.py             # SQLAlchemy модели
@@ -149,6 +148,7 @@ artifex/
 │   └── assets/
 ├── templates/                # Jinja2 шаблоны HTML
 ├── secrets/                  # RSA-ключи (игнорируются git)
+├── main.py                   # Точка входа FastAPI
 ├── .env                      # Переменные окружения
 ├── requirements.txt          # Зависимости Python
 └── README.md
