@@ -4,7 +4,164 @@
 {% block title %}Мой профиль{% endblock %}
 
 {% block content %}
-<h1><img src="{{ url_for('static', path='assets/bx-user.svg') }}"> Профиль пользователя</h1>
+<div class="profile-container">
+    <!-- Шапка профиля с аватаром и основной информацией -->
+    <div class="profile-header">
+        <div class="profile-avatar-large">
+            {{ user.username[0]|upper }}
+        </div>
+        <div class="profile-title">
+            <h1>{{ user.username }}</h1>
+            <div class="profile-badges">
+                <span class="badge">
+                    {{ user.school or 'Школа не указана' }}
+                </span>
+                <span class="badge">
+                    {{ user.grade or 'Класс не указан' }}
+                </span>
+                <span class="badge {% if user.confirmed %}confirmed-badge{% else %}not-confirmed-badge{% endif %}">
+                    {% if user.confirmed %}Подтвержден{% else %}Не подтвержден{% endif %}
+                </span>
+                {% if user.is_teacher %}
+                <span class="badge" style="background: var(--primary-gradient); color: white;">
+                    Учитель
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
+    <!-- Игровая статистика -->
+    <div class="gamification-stats">
+        <div class="stat-item">
+            <div class="stat-icon">
+                <img src="{{ url_for('static', path='assets/bx-shape-polygon.svg') }}" alt="XP">
+            </div>
+            <div class="stat-value">{{ user.xp or 0 }}</div>
+            <div class="stat-label">Опыт</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-icon">
+                <img src="{{ url_for('static', path='assets/bxs-objects-vertical-bottom.svg') }}" alt="Level">
+            </div>
+            <div class="stat-value">{{ user.level or 1 }}</div>
+            <div class="stat-label">Уровень</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-icon">
+                <img src="{{ url_for('static', path='assets/bxs-medal.svg') }}" alt="League">
+            </div>
+            <div class="stat-value">{{ user.league or 'Bronze' }}</div>
+            <div class="stat-label">Лига</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-icon">
+                <img src="{{ url_for('static', path='assets/bxs-flame.svg') }}" alt="Streak">
+            </div>
+            <div class="stat-value">{{ user.streak_days or 0 }}</div>
+            <div class="stat-label">Дней подряд</div>
+        </div>
+    </div>
 
+    <!-- Сетка с информацией -->
+    <div class="info-grid">
+        <!-- Личная информация -->
+        <div class="info-card">
+            <div class="card-header">
+                <h2>Личная информация</h2>
+            </div>
+            <div class="info-row">
+                <span class="info-label">
+                    Email:
+                </span>
+                <span class="info-value">{{ user.email }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">
+                    Телефон:
+                </span>
+                <span class="info-value">{{ user.phone }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">
+                    Зарегистрирован:
+                </span>
+                <span class="info-value">{{ user.created_at.strftime('%d.%m.%Y') if user.created_at else 'Не указано' }}</span>
+            </div>
+        </div>
+
+        <!-- Учебная информация -->
+        <div class="info-card">
+            <div class="card-header">
+                <h2>Учебная информация</h2>
+            </div>
+            <div class="info-row">
+                <span class="info-label">
+                    Школа:
+                </span>
+                <span class="info-value">{{ user.school or 'Не указано' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">
+                    Класс:
+                </span>
+                <span class="info-value">{{ user.grade or 'Не указан' }}</span>
+            </div>
+            {% if user.teacher %}
+            <div class="info-row">
+                <span class="info-label">
+                    Учитель:
+                </span>
+                <span class="info-value">{{ user.teacher.username }}</span>
+            </div>
+            {% endif %}
+            <div class="info-row">
+                <span class="info-label">
+                    Напоминания:
+                </span>
+                <span class="info-value">За {{ user.reminder_hours_before or 24 }} ч до урока</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Достижения -->
+    <div class="info-card" style="margin-bottom: var(--spacing-xxxl);">
+        <div class="card-header">
+            <h2>Мои достижения</h2>
+        </div>
+
+        <div class="achievements-grid" id="achievementsContainer">
+            <div class="empty-state">
+                Загрузка достижений...
+            </div>
+        </div>
+    </div>
+
+    <!-- Предупреждения о нагрузке -->
+    <div class="warnings-section">
+        <div class="card-header">
+            <h2>Предупреждения о нагрузке</h2>
+        </div>
+
+        <div id="warningsContainer">
+            <div class="empty-state">
+                Нет предупреждений о нагрузке
+            </div>
+        </div>
+    </div>
+
+<!--    &lt;!&ndash; Кнопки действий &ndash;&gt;-->
+<!--    <div class="action-buttons">-->
+<!--        <a href="/edit_profile" class="btn btn-primary">-->
+<!--            <img src="{{ url_for('static', path='assets/bx-edit.svg') }}" alt="Edit">-->
+<!--            Редактировать профиль-->
+<!--        </a>-->
+<!--        <a href="/logout" class="btn btn-secondary">-->
+<!--            <img src="{{ url_for('static', path='assets/bx-log-out.svg') }}" alt="Logout">-->
+<!--            Выйти-->
+<!--        </a>-->
+<!--    </div>-->
+</div>
+
+<script src="{{ url_for('static', path='js/profile.js') }}"></script>
 {% endblock %}

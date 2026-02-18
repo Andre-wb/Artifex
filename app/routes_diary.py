@@ -1,24 +1,20 @@
 """
 Модуль маршрутов для основного функционала дневника.
-Включает:
-- отображение страницы дневника (HTML)
-- API для управления предметами, уроками, оценками
-- API для статистики и шаблонов расписания
+Ученик может самостоятельно добавлять оценки, предметы и домашние задания.
 """
 
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from datetime import date, timedelta, datetime
 from typing import Optional, List
 import calendar
-from .auth import get_current_user, get_current_user_optional
 
 from .database import get_db
 from .models import User, Subject, Lesson, Grade, TimetableTemplate
-from .auth import get_current_user, get_current_teacher_user
+from .auth import get_current_user
 from .schemas import (
     SubjectCreate, SubjectResponse,
     LessonCreate, LessonUpdate, LessonResponse,
@@ -34,7 +30,6 @@ templates = Jinja2Templates(directory="templates")
 def generate_lessons_from_template(db: Session, user_id: int, start_date: date, end_date: date):
     """
     Вспомогательная функция для автоматического создания уроков на основе шаблона расписания.
-    Создаёт уроки на каждый день в указанном диапазоне, если их ещё нет.
     """
     templates = db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == user_id
@@ -45,13 +40,11 @@ def generate_lessons_from_template(db: Session, user_id: int, start_date: date, 
 
     current_date = start_date
     while current_date <= end_date:
-        # Проверяем, есть ли уже уроки в этот день
         existing_lessons = db.query(Lesson).filter(
             Lesson.user_id == user_id,
             Lesson.date == current_date
         ).count()
 
-        # Если уроков нет, создаём из шаблона
         if existing_lessons == 0:
             day_templates = [t for t in templates if t.day_of_week == current_date.weekday()]
             for template in day_templates:
@@ -79,12 +72,9 @@ async def diary_page(
         db: Session = Depends(get_db)
 ):
     """
-    Отображает основную страницу дневника с расписанием на ближайшие дни.
-    Автоматически генерирует уроки на 2 недели вперёд, если их нет.
+    Отображает основную страницу дневника.
     """
     today = date.today()
-
-    # Автоматически создаем уроки на 2 недели вперед
     end_date = today + timedelta(days=14)
     generate_lessons_from_template(db, current_user.id, today, end_date)
 
@@ -97,10 +87,20 @@ async def diary_page(
         ).order_by(Lesson.lesson_number).all()
 
         # Загружаем оценки для каждого урока
-        for lesson in lessons:
-            lesson.grades = db.query(Grade).filter(
-                Grade.lesson_id == lesson.id
-            ).all()
+        lesson_ids = [lesson.id for lesson in lessons]
+        if lesson_ids:
+            grades = db.query(Grade).filter(Grade.lesson_id.in_(lesson_ids)).all()
+            grades_by_lesson = {}
+            for grade in grades:
+                if grade.lesson_id not in grades_by_lesson:
+                    grades_by_lesson[grade.lesson_id] = []
+                grades_by_lesson[grade.lesson_id].append(grade)
+
+            for lesson in lessons:
+                lesson.grades = grades_by_lesson.get(lesson.id, [])
+        else:
+            for lesson in lessons:
+                lesson.grades = []
 
         days.append({
             'date': day_date,
@@ -123,33 +123,13 @@ async def diary_page(
     )
 
 
-@router.get("/stats", response_class=HTMLResponse)
-async def stats_page(
-        request: Request,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
-):
-    """
-    Отображает страницу статистики успеваемости.
-    """
-    return templates.TemplateResponse(
-        "stats.html",
-        {
-            "request": request,
-            "user": current_user
-        }
-    )
-
-
-# ==================== API для предметов ====================
+# ==================== API для предметов (доступно всем) ====================
 @router.get("/api/subjects", response_model=List[SubjectResponse])
 async def get_subjects(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает список всех предметов.
-    """
+    """Возвращает список всех предметов."""
     return db.query(Subject).all()
 
 
@@ -159,9 +139,7 @@ async def create_subject(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Создаёт новый предмет. Доступно всем аутентифицированным пользователям.
-    """
+    """Создаёт новый предмет (доступно всем пользователям)."""
     db_subject = Subject(**subject.dict())
     db.add(db_subject)
     db.commit()
@@ -176,9 +154,7 @@ async def update_subject(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Обновляет существующий предмет.
-    """
+    """Обновляет существующий предмет."""
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -197,9 +173,7 @@ async def delete_subject(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Удаляет предмет, только если к нему не привязаны уроки.
-    """
+    """Удаляет предмет, если к нему не привязаны уроки."""
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -213,7 +187,7 @@ async def delete_subject(
     return {"ok": True}
 
 
-# ==================== API для уроков ====================
+# ==================== API для уроков (доступно всем) ====================
 @router.get("/api/lessons", response_model=List[LessonResponse])
 async def get_lessons(
         date_from: Optional[date] = None,
@@ -221,10 +195,7 @@ async def get_lessons(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает список уроков текущего пользователя.
-    Можно фильтровать по диапазону дат.
-    """
+    """Возвращает список уроков текущего пользователя."""
     query = db.query(Lesson).filter(Lesson.user_id == current_user.id)
 
     if date_from:
@@ -235,8 +206,20 @@ async def get_lessons(
     lessons = query.order_by(Lesson.date, Lesson.lesson_number).all()
 
     # Загружаем оценки для каждого урока
-    for lesson in lessons:
-        lesson.grades = db.query(Grade).filter(Grade.lesson_id == lesson.id).all()
+    lesson_ids = [lesson.id for lesson in lessons]
+    if lesson_ids:
+        grades = db.query(Grade).filter(Grade.lesson_id.in_(lesson_ids)).all()
+        grades_by_lesson = {}
+        for grade in grades:
+            if grade.lesson_id not in grades_by_lesson:
+                grades_by_lesson[grade.lesson_id] = []
+            grades_by_lesson[grade.lesson_id].append(grade)
+
+        for lesson in lessons:
+            lesson.grades = grades_by_lesson.get(lesson.id, [])
+    else:
+        for lesson in lessons:
+            lesson.grades = []
 
     return lessons
 
@@ -247,9 +230,7 @@ async def get_lesson(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает детальную информацию об уроке по его ID.
-    """
+    """Возвращает детальную информацию об уроке."""
     lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -267,9 +248,7 @@ async def create_lesson(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Создаёт новый урок для текущего пользователя.
-    """
+    """Создаёт новый урок для текущего пользователя."""
     db_lesson = Lesson(**lesson.dict(), user_id=current_user.id)
     db.add(db_lesson)
     db.commit()
@@ -285,9 +264,7 @@ async def update_lesson(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Обновляет существующий урок.
-    """
+    """Обновляет существующий урок."""
     db_lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -310,9 +287,7 @@ async def delete_lesson(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Удаляет урок.
-    """
+    """Удаляет урок."""
     db_lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -325,19 +300,16 @@ async def delete_lesson(
     return {"ok": True}
 
 
-# ==================== API для оценок ====================
+# ==================== API для оценок (доступно всем) ====================
 @router.get("/api/grades", response_model=List[GradeResponse])
 async def get_grades(
         subject_id: Optional[int] = None,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-        current_user: User = Depends(get_current_teacher_user),
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает список оценок текущего пользователя (учителя) – то есть его собственных оценок.
-    (Примечание: обычно оценки привязаны к ученикам, здесь вероятно ошибка, но оставлено как есть.)
-    """
+    """Возвращает список оценок текущего пользователя."""
     query = db.query(Grade).filter(Grade.user_id == current_user.id)
 
     if subject_id:
@@ -347,33 +319,62 @@ async def get_grades(
     if date_to:
         query = query.filter(Grade.date <= date_to)
 
-    return query.order_by(Grade.date.desc()).all()
+    grades = query.order_by(Grade.date.desc()).all()
+
+    # Загружаем связанные данные
+    for grade in grades:
+        grade.subject = db.query(Subject).filter(Subject.id == grade.subject_id).first()
+        if grade.lesson_id:
+            grade.lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
+
+    return grades
 
 
-from .auth import get_current_teacher_user
+@router.get("/api/grades/{grade_id}", response_model=GradeResponse)
+async def get_grade(
+        grade_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    """Возвращает оценку по ID."""
+    grade = db.query(Grade).filter(
+        Grade.id == grade_id,
+        Grade.user_id == current_user.id
+    ).first()
+    if not grade:
+        raise HTTPException(status_code=404, detail="Оценка не найдена")
+
+    grade.subject = db.query(Subject).filter(Subject.id == grade.subject_id).first()
+    if grade.lesson_id:
+        grade.lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
+
+    return grade
 
 
 @router.post("/api/grades", response_model=GradeResponse)
 async def create_grade(
         grade: GradeCreate,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_teacher_user)
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
-    """
-    Создаёт оценку для ученика (учитель может ставить оценку только своим ученикам).
-    Привязывается к конкретному уроку.
-    """
-    lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Урок не найден")
+    """Создаёт оценку для текущего пользователя."""
+    # Проверяем существование предмета
+    subject = db.query(Subject).filter(Subject.id == grade.subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Предмет не найден")
 
-    student = db.query(User).filter(User.id == lesson.user_id).first()
-    if not student or student.teacher_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
+    # Проверяем урок, если указан
+    if grade.lesson_id:
+        lesson = db.query(Lesson).filter(
+            Lesson.id == grade.lesson_id,
+            Lesson.user_id == current_user.id
+        ).first()
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Урок не найден")
 
     db_grade = Grade(
-        user_id=lesson.user_id,
-        subject_id=lesson.subject_id,
+        user_id=current_user.id,
+        subject_id=grade.subject_id,
         lesson_id=grade.lesson_id,
         value=grade.value,
         weight=grade.weight,
@@ -383,6 +384,11 @@ async def create_grade(
     db.add(db_grade)
     db.commit()
     db.refresh(db_grade)
+
+    db_grade.subject = subject
+    if grade.lesson_id:
+        db_grade.lesson = lesson
+
     return db_grade
 
 
@@ -390,52 +396,43 @@ async def create_grade(
 async def update_grade(
         grade_id: int,
         grade_update: GradeUpdate,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_teacher_user)
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
-    """
-    Обновляет существующую оценку. Доступно только учителю, который является учителем ученика.
-    """
-    db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    """Обновляет существующую оценку."""
+    db_grade = db.query(Grade).filter(
+        Grade.id == grade_id,
+        Grade.user_id == current_user.id
+    ).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
-
-    lesson = db_grade.lesson
-    if not lesson:
-        raise HTTPException(status_code=400, detail="Оценка не привязана к уроку")
-
-    student = db.query(User).filter(User.id == lesson.user_id).first()
-    if not student or student.teacher_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
     for key, value in grade_update.dict(exclude_unset=True).items():
         setattr(db_grade, key, value)
 
     db.commit()
     db.refresh(db_grade)
+
+    db_grade.subject = db.query(Subject).filter(Subject.id == db_grade.subject_id).first()
+    if db_grade.lesson_id:
+        db_grade.lesson = db.query(Lesson).filter(Lesson.id == db_grade.lesson_id).first()
+
     return db_grade
 
 
 @router.delete("/api/grades/{grade_id}")
 async def delete_grade(
         grade_id: int,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_teacher_user)
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
-    """
-    Удаляет оценку. Доступно только учителю ученика.
-    """
-    db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
+    """Удаляет оценку."""
+    db_grade = db.query(Grade).filter(
+        Grade.id == grade_id,
+        Grade.user_id == current_user.id
+    ).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
-
-    lesson = db_grade.lesson
-    if not lesson:
-        raise HTTPException(status_code=400, detail="Оценка не привязана к уроку")
-
-    student = db.query(User).filter(User.id == lesson.user_id).first()
-    if not student or student.teacher_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
     db.delete(db_grade)
     db.commit()
@@ -448,10 +445,7 @@ async def get_averages(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает средние оценки текущего пользователя по каждому предмету
-    (средневзвешенные).
-    """
+    """Возвращает средние оценки по каждому предмету."""
     subjects = db.query(Subject).all()
     result = []
 
@@ -473,7 +467,7 @@ async def get_averages(
             "subject_name": subject.name,
             "average": round(average, 2),
             "grades_count": len(grades),
-            "color": subject.color
+            "color": getattr(subject, 'color', '#667eea')
         })
 
     return result
@@ -485,9 +479,7 @@ async def get_timetable_template(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Возвращает шаблон расписания для текущего пользователя.
-    """
+    """Возвращает шаблон расписания."""
     return db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == current_user.id
     ).order_by(TimetableTemplate.day_of_week, TimetableTemplate.lesson_number).all()
@@ -499,11 +491,7 @@ async def create_timetable_template(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Создаёт или обновляет запись в шаблоне расписания.
-    Если для указанного дня недели и номера урока уже есть запись, она обновляется.
-    """
-    # Проверяем, нет ли уже такого урока в шаблоне
+    """Создаёт или обновляет запись в шаблоне расписания."""
     existing = db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == current_user.id,
         TimetableTemplate.day_of_week == template.day_of_week,
@@ -511,14 +499,12 @@ async def create_timetable_template(
     ).first()
 
     if existing:
-        # Обновляем существующий
         for key, value in template.dict().items():
             setattr(existing, key, value)
         db.commit()
         db.refresh(existing)
         return existing
     else:
-        # Создаем новый
         db_template = TimetableTemplate(**template.dict(), user_id=current_user.id)
         db.add(db_template)
         db.commit()
@@ -532,9 +518,7 @@ async def delete_timetable_template(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Удаляет запись из шаблона расписания.
-    """
+    """Удаляет запись из шаблона расписания."""
     db_template = db.query(TimetableTemplate).filter(
         TimetableTemplate.id == template_id,
         TimetableTemplate.user_id == current_user.id
@@ -547,16 +531,13 @@ async def delete_timetable_template(
     return {"ok": True}
 
 
-# ==================== Ручной запуск генерации расписания ====================
 @router.post("/api/generate-lessons")
 async def generate_lessons(
         weeks_ahead: int = 2,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    """
-    Ручной запуск генерации уроков из шаблона на указанное количество недель вперёд.
-    """
+    """Ручной запуск генерации уроков из шаблона."""
     today = date.today()
     end_date = today + timedelta(days=weeks_ahead * 7)
     generate_lessons_from_template(db, current_user.id, today, end_date)
