@@ -118,7 +118,11 @@ SMTP_PASSWORD=your-app-password
 
 ```
 artifex/
-├── app/                      # Основной пакет приложения
+├── app/
+    ├── static/                   # Статические файлы (CSS, JS, assets)
+│       ├── css/
+│       ├── js/
+│       └── assets/                      # Основной пакет приложения
 │   ├── __init__.py
 │   ├── config.py             # Конфигурация из .env
 │   ├── database.py           # Подключение к БД, сессии
@@ -141,11 +145,6 @@ artifex/
 │   ├── waf.py                # Web Application Firewall
 │   ├── middleware.py         # CSRF, обновление токенов, логи
 │   ├── routes_*.py           # Маршруты по функционалу
-│   └── ...                   # остальные модули
-├── static/                   # Статические файлы (CSS, JS, assets)
-│   ├── css/
-│   ├── js/
-│   └── assets/
 ├── templates/                # Jinja2 шаблоны HTML
 ├── secrets/                  # RSA-ключи (игнорируются git)
 ├── main.py                   # Точка входа FastAPI
