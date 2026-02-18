@@ -7,11 +7,11 @@
 {% endblock %}
 
 {% block content %}
-<h1>📅 Шаблон расписания</h1>
+<h1><img src="{{ url_for('static', path='assets/bx-calendar-week.svg') }}" class="invert"> Шаблон расписания</h1>
 
 <div class="templates-container">
     <button class="generate-btn" onclick="generateLessons()">
-        🔄 Создать уроки на 2 недели вперед из шаблона
+        <img src="{{ url_for('static', path='assets/bx-repeat.svg') }}" class="invert"> Создать уроки на 2 недели вперед из шаблона
     </button>
 
     {% for day_index in range(7) %}
@@ -31,8 +31,8 @@
                     {% endif %}
                 </div>
                 <div class="lesson-actions">
-                    <button onclick="editTemplate({{ template.id }})" class="edit-btn" title="Редактировать">✏️</button>
-                    <button onclick="deleteTemplate({{ template.id }})" class="delete-btn" title="Удалить">🗑️</button>
+                    <button onclick="editTemplate({{ template.id }})" class="edit-btn" title="Редактировать"><img src="{{ url_for('static', path='assets/bx-pencil.svg') }}" class="invert"></button>
+                    <button onclick="deleteTemplate({{ template.id }})" class="delete-btn" title="Удалить"><img src="{{ url_for('static', path='assets/bx-trash.svg') }}" class="invert"></button>
                 </div>
             </div>
             {% endfor %}
@@ -102,7 +102,7 @@
 <!-- Модальное окно для добавления нового предмета -->
 <div id="newSubjectModal" class="modal">
     <div class="modal-content small-modal">
-        <h2>➕ Новый предмет</h2>
+        <h2><img src="{{ url_for('static', path='assets/bx-plus-circle.svg') }}" class="invert"> Новый предмет</h2>
         <form id="newSubjectForm" onsubmit="createNewSubject(event)">
             <div class="form-group">
                 <label for="newSubjectName">Название предмета *</label>
