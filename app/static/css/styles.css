@@ -733,3 +733,397 @@ nav a.active {
 .text-inverter {
     color: var(--text-primary);
 }
+
+.profile-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Профиль-шапка с аватаром и основной информацией */
+.profile-header {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-card);
+    padding: var(--spacing-xxxl);
+    margin-bottom: var(--spacing-xxxl);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xxxl);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-card);
+    transition: transform var(--transition-default), box-shadow var(--transition-default);
+}
+
+.profile-header:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+.profile-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: var(--font-weight-bold);
+    color: var(--text-white);
+    border: 4px solid var(--border-light);
+    box-shadow: var(--shadow-nav-arrow);
+    transition: all var(--transition-default);
+}
+
+.profile-avatar-large:hover {
+    transform: scale(1.05);
+    border-color: var(--text-white);
+}
+
+.profile-title {
+    flex: 1;
+}
+
+.profile-title h1 {
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-xxl);
+    color: var(--text-primary);
+}
+
+.profile-badges {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-md);
+}
+
+.badge {
+    background: var(--bg-lessons);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-room);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    border: 1px solid var(--border-lesson);
+    transition: all var(--transition-fast);
+}
+
+.badge:hover {
+    background: var(--primary-gradient);
+    color: var(--text-white);
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+.badge img {
+    width: 18px;
+    height: 18px;
+    filter: invert(var(--inverter));
+    transition: filter var(--transition-fast);
+}
+
+.badge:hover img {
+    filter: invert(0);
+}
+
+/* Игровая статистика (геймификация) */
+.gamification-stats {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-card);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xxxl);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-card);
+}
+
+.stat-item {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: var(--bg-lessons);
+    border-radius: var(--border-radius-lesson);
+    transition: all var(--transition-default);
+    border: 1px solid var(--border-lesson);
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lesson-hover);
+    background: var(--bg-lesson-hover);
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-md);
+    background: var(--primary-gradient);
+    border-radius: var(--border-radius-nav-arrow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon img {
+    width: 24px;
+    height: 24px;
+    filter: invert(1);
+}
+
+.stat-value {
+    font-size: var(--font-size-xxl);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Сетка с информацией */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xxxl);
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-card {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-card);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-card);
+    transition: all var(--transition-default);
+}
+
+.info-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-footer);
+}
+
+.card-header img {
+    width: 24px;
+    height: 24px;
+    filter: invert(var(--inverter));
+}
+
+.card-header h2 {
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* Личная информация */
+.info-row {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md) 0;
+    border-bottom: 1px solid var(--border-lesson);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    flex: 0 0 120px;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.info-label img {
+    width: 18px;
+    height: 18px;
+    filter: invert(var(--inverter));
+}
+
+.info-value {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Статус подтверждения */
+.confirmed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--border-radius-date);
+    font-size: var(--font-size-sm);
+    background: var(--grade-great-bg);
+    color: var(--grade-great-text);
+}
+
+.not-confirmed-badge {
+    background: var(--grade-bad-bg);
+    color: var(--grade-bad-text);
+}
+
+/* Достижения */
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.achievement-card {
+    background: var(--bg-lessons);
+    border-radius: var(--border-radius-lesson);
+    padding: var(--spacing-lg);
+    text-align: center;
+    border: 1px solid var(--border-lesson);
+    transition: all var(--transition-default);
+}
+
+.achievement-card:hover {
+    transform: translateY(-3px);
+    background: var(--bg-lesson-hover);
+    border-color: var(--primary-start);
+}
+
+.achievement-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto var(--spacing-md);
+    background: var(--primary-gradient);
+    border-radius: var(--border-radius-nav-arrow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xl);
+}
+
+.achievement-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.achievement-date {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+/* Кнопка действий */
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+}
+
+.btn {
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--border-radius-room);
+    border: none;
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: all var(--transition-default);
+    font-size: var(--font-size-md);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary-gradient);
+    color: var(--text-white);
+    box-shadow: var(--shadow-nav-arrow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+.btn-secondary {
+    background: var(--bg-lessons);
+    color: var(--text-primary);
+    border: 1px solid var(--border-lesson);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-lesson-hover);
+    transform: translateY(-2px);
+}
+
+.btn img {
+    width: 18px;
+    height: 18px;
+    filter: invert(var(--inverter));
+}
+
+.btn-primary img {
+    filter: invert(0);
+}
+
+/* Предупреждения о нагрузке */
+.warnings-section {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-card);
+    padding: var(--spacing-xl);
+    margin-top: var(--spacing-xxxl);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-card);
+}
+
+.warning-item {
+    background: var(--bg-lessons);
+    border-left: 4px solid var(--grade-middle-bg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--border-radius-lesson);
+    transition: all var(--transition-fast);
+}
+
+.warning-item:hover {
+    transform: translateX(5px);
+    background: var(--bg-lesson-hover);
+}
+
+.warning-title {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.warning-text {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xxxl);
+    color: var(--text-secondary);
+    background: var(--bg-lessons);
+    border-radius: var(--border-radius-lesson);
+}
