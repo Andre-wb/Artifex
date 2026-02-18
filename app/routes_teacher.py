@@ -139,3 +139,38 @@ async def regenerate_code(
         "expires_at": group.expires_at,
         "is_active": group.is_active
     }
+
+@router.get("/pending-lessons")
+async def get_pending_lessons(
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_teacher_user)
+):
+    """
+    Возвращает уроки учеников текущего учителя, у которых есть вложения
+    и которые ещё не подтверждены.
+    """
+    lessons = db.query(models.Lesson).join(
+        models.User, models.Lesson.user_id == models.User.id
+    ).filter(
+        models.User.teacher_id == current_user.id,
+        models.Lesson.teacher_confirmed == False,
+        models.Lesson.attachments.any()
+    ).order_by(models.Lesson.date.desc()).all()
+
+    result = []
+    for lesson in lessons:
+        result.append({
+            "lesson_id": lesson.id,
+            "date": lesson.date.isoformat(),
+            "subject": lesson.subject.name,
+            "student_name": lesson.user.username,
+            "homework": lesson.homework,
+            "attachments": [
+                {
+                    "id": att.id,
+                    "file_path": att.file_path,
+                    "original_filename": att.original_filename
+                } for att in lesson.attachments
+            ]
+        })
+    return result

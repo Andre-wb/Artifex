@@ -17,6 +17,12 @@ from app.routes_gamification import router as gamification_router
 from app.routes_chat import router as chat_router
 from app.routes_mood import router as mood_router
 from app.routes_academic import router as academic_router
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from app.load_analyzer import run_load_analysis_for_all_users
+from app.database import SessionLocal
+from app.routes_warnings import router as warnings_router
+from app.routes_reminder import router as reminder_router
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -30,6 +36,8 @@ app.include_router(diary_router)
 app.include_router(chat_router)
 app.include_router(mood_router)
 app.include_router(academic_router)
+app.include_router(warnings_router)
+app.include_router(reminder_router)
 
 templates = Jinja2Templates(directory="templates")
 app.state.templates = templates
@@ -52,6 +60,16 @@ waf_config = {
     'log_level': 'INFO',
     'safe_params': ['csrf_token', '_csrf', 'csrfmiddlewaretoken', 'authenticity_token']
 }
+
+scheduler = AsyncIOScheduler()
+
+async def scheduled_load_analysis():
+    db = SessionLocal()
+    run_load_analysis_for_all_users(db)
+    db.close()
+
+scheduler.add_job(scheduled_load_analysis, CronTrigger(hour=20, minute=0))
+scheduler.start()
 
 # Инициализация WAF
 # waf_engine = setup_waf(app, waf_config)
