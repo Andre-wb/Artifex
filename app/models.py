@@ -243,3 +243,29 @@ class FinalGrade(Base):
     user = relationship("User", backref="final_grades")
     subject = relationship("Subject", backref="final_grades")
     term = relationship("AcademicTerm", back_populates="final_grades")
+
+class LessonAttachment(Base):
+    __tablename__ = 'lesson_attachments'
+
+    id = Column(Integer, primary_key=True)
+    lesson_id = Column(Integer, ForeignKey('lessons.id'), nullable=False)
+    file_path = Column(String(255), nullable=False)
+    original_filename = Column(String(255), nullable=True)
+    mime_type = Column(String(100), nullable=True)
+    file_size = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    lesson = relationship("Lesson", backref="attachments")
+
+class LoadWarning(Base):
+    __tablename__ = 'load_warnings'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    message = Column(Text, nullable=False)
+    advice = Column(Text, nullable=True)
+    date = Column(Date, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+
+    user = relationship("User", backref="load_warnings")

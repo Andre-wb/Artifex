@@ -364,5 +364,13 @@ class TermGradeRequest(BaseModel):
     term_id: int
     subject_id: Optional[int] = None
 
+class LoadWarningOut(BaseModel):
+    id: int
+    message: str
+    advice: Optional[str]
+    date: date
+    is_read: bool
+    created_at: datetime
+
 GradeResponse.model_rebuild()
 LessonResponse.model_rebuild()
