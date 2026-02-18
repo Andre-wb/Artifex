@@ -132,13 +132,11 @@ async def stats_page(
     """
     Отображает страницу статистики успеваемости.
     """
-    subjects = db.query(Subject).all()
     return templates.TemplateResponse(
         "stats.html",
         {
             "request": request,
-            "user": current_user,
-            "subjects": subjects
+            "user": current_user
         }
     )
 
@@ -220,33 +218,14 @@ async def delete_subject(
 async def get_lessons(
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-        user_id: Optional[int] = None,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
     """
-    Возвращает список уроков.
-    Если user_id указан и текущий пользователь - учитель, возвращает уроки указанного ученика.
-    Иначе возвращает уроки текущего пользователя.
+    Возвращает список уроков текущего пользователя.
+    Можно фильтровать по диапазону дат.
     """
-    # Если запрошены уроки другого пользователя
-    if user_id and user_id != current_user.id:
-        # Проверяем, имеет ли текущий пользователь право (учитель этого ученика)
-        if not current_user.is_teacher:
-            raise HTTPException(status_code=403, detail="Нет прав на просмотр уроков других пользователей")
-
-        student = db.query(User).filter(
-            User.id == user_id,
-            User.teacher_id == current_user.id
-        ).first()
-
-        if not student:
-            raise HTTPException(status_code=403, detail="Этот ученик не ваш")
-
-        query = db.query(Lesson).filter(Lesson.user_id == user_id)
-    else:
-        # Свои уроки
-        query = db.query(Lesson).filter(Lesson.user_id == current_user.id)
+    query = db.query(Lesson).filter(Lesson.user_id == current_user.id)
 
     if date_from:
         query = query.filter(Lesson.date >= date_from)
@@ -271,23 +250,12 @@ async def get_lesson(
     """
     Возвращает детальную информацию об уроке по его ID.
     """
-    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    lesson = db.query(Lesson).filter(
+        Lesson.id == lesson_id,
+        Lesson.user_id == current_user.id
+    ).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
-
-    # Проверка прав доступа
-    if lesson.user_id != current_user.id:
-        # Если это не свой урок, проверяем, является ли текущий пользователь учителем этого ученика
-        if not current_user.is_teacher:
-            raise HTTPException(status_code=403, detail="Нет доступа к этому уроку")
-
-        student = db.query(User).filter(
-            User.id == lesson.user_id,
-            User.teacher_id == current_user.id
-        ).first()
-
-        if not student:
-            raise HTTPException(status_code=403, detail="Это не ваш ученик")
 
     lesson.grades = db.query(Grade).filter(Grade.lesson_id == lesson.id).all()
     return lesson
@@ -363,33 +331,14 @@ async def get_grades(
         subject_id: Optional[int] = None,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-        user_id: Optional[int] = None,
-        current_user: User = Depends(get_current_user),
+        current_user: User = Depends(get_current_teacher_user),
         db: Session = Depends(get_db)
 ):
     """
-    Возвращает список оценок.
-    Если user_id указан и текущий пользователь - учитель, возвращает оценки указанного ученика.
-    Иначе возвращает оценки текущего пользователя.
+    Возвращает список оценок текущего пользователя (учителя) – то есть его собственных оценок.
+    (Примечание: обычно оценки привязаны к ученикам, здесь вероятно ошибка, но оставлено как есть.)
     """
-    # Если запрошены оценки другого пользователя
-    if user_id and user_id != current_user.id:
-        # Проверяем, имеет ли текущий пользователь право (учитель этого ученика)
-        if not current_user.is_teacher:
-            raise HTTPException(status_code=403, detail="Нет прав на просмотр оценок других пользователей")
-
-        student = db.query(User).filter(
-            User.id == user_id,
-            User.teacher_id == current_user.id
-        ).first()
-
-        if not student:
-            raise HTTPException(status_code=403, detail="Этот ученик не ваш")
-
-        query = db.query(Grade).filter(Grade.user_id == user_id)
-    else:
-        # Свои оценки
-        query = db.query(Grade).filter(Grade.user_id == current_user.id)
+    query = db.query(Grade).filter(Grade.user_id == current_user.id)
 
     if subject_id:
         query = query.filter(Grade.subject_id == subject_id)
@@ -399,6 +348,9 @@ async def get_grades(
         query = query.filter(Grade.date <= date_to)
 
     return query.order_by(Grade.date.desc()).all()
+
+
+from .auth import get_current_teacher_user
 
 
 @router.post("/api/grades", response_model=GradeResponse)
@@ -411,23 +363,14 @@ async def create_grade(
     Создаёт оценку для ученика (учитель может ставить оценку только своим ученикам).
     Привязывается к конкретному уроку.
     """
-    # Проверяем, указан ли lesson_id
-    if not grade.lesson_id:
-        raise HTTPException(status_code=400, detail="Необходимо указать урок")
-
     lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
 
     student = db.query(User).filter(User.id == lesson.user_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Ученик не найден")
-
-    # Проверяем, что учитель имеет право ставить оценку этому ученику
-    if student.teacher_id != current_user.id:
+    if not student or student.teacher_id != current_user.id:
         raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
-    # Создаем оценку
     db_grade = Grade(
         user_id=lesson.user_id,
         subject_id=lesson.subject_id,
@@ -440,12 +383,8 @@ async def create_grade(
     db.add(db_grade)
     db.commit()
     db.refresh(db_grade)
-
-    # Загружаем связанные данные для ответа
-    db_grade.subject = lesson.subject
-    db_grade.lesson = lesson
-
     return db_grade
+
 
 @router.put("/api/grades/{grade_id}", response_model=GradeResponse)
 async def update_grade(
@@ -506,38 +445,19 @@ async def delete_grade(
 # ==================== API для статистики ====================
 @router.get("/api/stats/averages")
 async def get_averages(
-        user_id: Optional[int] = None,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
     """
-    Возвращает средние оценки по каждому предмету (средневзвешенные).
-    Если user_id указан и текущий пользователь - учитель, возвращает для указанного ученика.
-    Иначе возвращает для текущего пользователя.
+    Возвращает средние оценки текущего пользователя по каждому предмету
+    (средневзвешенные).
     """
-    target_user_id = current_user.id
-
-    # Если запрошена статистика другого пользователя
-    if user_id and user_id != current_user.id:
-        if not current_user.is_teacher:
-            raise HTTPException(status_code=403, detail="Нет прав на просмотр статистики других пользователей")
-
-        student = db.query(User).filter(
-            User.id == user_id,
-            User.teacher_id == current_user.id
-        ).first()
-
-        if not student:
-            raise HTTPException(status_code=403, detail="Этот ученик не ваш")
-
-        target_user_id = user_id
-
     subjects = db.query(Subject).all()
     result = []
 
     for subject in subjects:
         grades = db.query(Grade).filter(
-            Grade.user_id == target_user_id,
+            Grade.user_id == current_user.id,
             Grade.subject_id == subject.id
         ).all()
 

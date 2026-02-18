@@ -167,38 +167,3 @@ async def send_email(recipient: str, subject: str, html_content: str) -> bool:
     except Exception as e:
         logger.error(f"Ошибка отправки email: {e}")
         return False
-
-def generate_reset_token(email: str) -> str:
-    """
-    Генерирует подписанный токен для сброса пароля.
-    """
-    return serializer.dumps(email, salt="password-reset")
-
-def verify_reset_token(token: str, expiration: int = 3600):
-    """
-    Проверяет токен сброса пароля.
-    Возвращает email, если токен валиден, иначе False.
-    """
-    try:
-        return serializer.loads(token, salt="password-reset", max_age=expiration)
-    except (SignatureExpired, BadSignature):
-        return False
-
-async def send_password_reset_email(user_email: str, token: str, request: Request) -> bool:
-    """
-    Отправляет письмо со ссылкой для сброса пароля.
-    """
-    reset_url = f"{request.base_url}reset-password/{token}"
-    subject = "Сброс пароля"
-    html_content = f"""
-    <html>
-    <body>
-        <p>Здравствуйте!</p>
-        <p>Вы запросили сброс пароля. Для продолжения перейдите по ссылке:</p>
-        <p><a href="{reset_url}">Сбросить пароль</a></p>
-        <p>Если вы не запрашивали сброс пароля, проигнорируйте это письмо.</p>
-        <p>Ссылка действительна в течение 1 часа.</p>
-    </body>
-    </html>
-    """
-    return await send_email(user_email, subject, html_content)
