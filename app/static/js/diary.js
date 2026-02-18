@@ -410,16 +410,16 @@ function generateLessonsFromTemplate() {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     // Добавляем кнопку для создания предметов на страницу, если её нет
-    const diaryHeader = document.querySelector('.diary-header');
-    if (diaryHeader && !document.getElementById('addSubjectBtn')) {
-        const subjectBtn = document.createElement('button');
-        subjectBtn.id = 'addSubjectBtn';
-        subjectBtn.className = 'btn btn-primary';
-        subjectBtn.style.marginLeft = '10px';
-        subjectBtn.innerHTML = '➕ Управление предметами';
-        subjectBtn.onclick = showAddSubjectModal;
-        diaryHeader.appendChild(subjectBtn);
-    }
+    // const diaryHeader = document.querySelector('.diary-header');
+    // if (diaryHeader && !document.getElementById('addSubjectBtn')) {
+    //     const subjectBtn = document.createElement('button');
+    //     subjectBtn.id = 'addSubjectBtn';
+    //     subjectBtn.className = 'btn btn-primary';
+    //     subjectBtn.style.marginLeft = '10px';
+    //     subjectBtn.innerHTML = '➕ Управление предметами';
+    //     subjectBtn.onclick = showAddSubjectModal;
+    //     diaryHeader.appendChild(subjectBtn);
+    // }
 
     // Добавляем модальное окно для предметов, если его нет
     if (!document.getElementById('subjectModal')) {
