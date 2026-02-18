@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from app.waf import setup_waf, DEFAULT_WAF_CONFIG
 import logging
+import asyncio
 from app.auth import key_manager
 from app.routes_diary import router as diary_router
 from fastapi.templating import Jinja2Templates
@@ -28,6 +29,7 @@ from app.routes_pages import router as pages_router
 from app.routes_diary_api import router as diary_api_router
 from app.routes_ai import router as ai_router
 from app.routes_youtube import router as materials_router
+from apscheduler.triggers.interval import IntervalTrigger
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -58,12 +60,17 @@ waf_config = {
 scheduler = AsyncIOScheduler()
 
 async def scheduled_load_analysis():
-    """Запланированная задача для анализа нагрузки всех пользователей"""
+    """Запланированная задача для анализа нагрузки всех пользователей (неблокирующая)"""
     logger.info("Запуск запланированного анализа нагрузки для всех пользователей")
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _run_load_analysis_sync)
+    logger.info("Анализ нагрузки успешно завершен")
+
+def _run_load_analysis_sync():
+    """Синхронная обёртка, выполняющая анализ в отдельном потоке"""
     db = SessionLocal()
     try:
         run_load_analysis_for_all_users(db)
-        logger.info("Анализ нагрузки успешно завершен")
     except Exception as e:
         logger.error(f"Ошибка при выполнении анализа нагрузки: {e}")
     finally:
@@ -78,8 +85,8 @@ async def startup_event():
     # Добавляем задачу в планировщик
     scheduler.add_job(
         scheduled_load_analysis,
-        CronTrigger(hour=20, minute=0),
-        id="daily_load_analysis",
+        IntervalTrigger(minutes=30),
+        id="load_analysis_30min",
         replace_existing=True
     )
 
