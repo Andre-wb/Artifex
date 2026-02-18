@@ -11,6 +11,9 @@
   <div class="current-date-info">
     <span class="current-date">Сегодня: {{ today.strftime('%d %B %Y') }}</span>
   </div>
+  <div class="diary-actions">
+    <button class="btn btn-primary" onclick="openSubjectManager()">📚 Управление предметами</button>
+  </div>
 </div>
 
 <div class="days-carousel">
@@ -35,16 +38,11 @@
           <div class="lesson-homework"><img src="{{ url_for('static', path='assets/bx-book-bookmark.svg') }}"> {{ lesson.homework[:30] }}{% if lesson.homework|length > 30 %}...{% endif %}</div>
           {% endif %}
         </div>
-        <div class="lesson-grade
-          {% if lesson.grades %}
-            {% if lesson.grades[0].value >= 4 %}great
-            {% elif lesson.grades[0].value == 3 %}normal
-            {% else %}bad{% endif %}
-          {% endif %}">
-          {% if lesson.grades %}
-          {{ lesson.grades[0].value }}
-          {% endif %}
+        <div class="lesson-grade {% if lesson.grades %}{% if lesson.grades[0].value >= 4 %}great{% elif lesson.grades[0].value == 3 %}normal{% else %}bad{% endif %}{% endif %}">
+          {% if lesson.grades %}{{ lesson.grades[0].value }}{% endif %}
         </div>
+        <!-- Кнопка быстрого добавления оценки к уроку -->
+        <button class="quick-add-grade" onclick="showAddGradeModal({{ lesson.id }})" title="Добавить оценку">➕</button>
       </div>
       {% endfor %}
 
@@ -72,12 +70,9 @@
 <div class="carousel-nav">
   <button class="nav-arrow prev" onclick="scrollCarousel(-400)">←</button>
   <button class="nav-arrow next" onclick="scrollCarousel(400)">→</button>
-<!--  Кнопка работает неисправно, позже нужно пофиксить
-      <button class="nav-arrow" onclick="document.querySelector('.today').scrollIntoView({behavior: 'smooth', block: 'center'})">-->
-<!--    📍-->
-<!--  </button>-->
 </div>
 
+<!-- Модальное окно для урока -->
 <div id="lessonModal" class="modal">
   <div class="modal-content">
     <h2 id="modalTitle">Добавить урок</h2>
@@ -134,6 +129,7 @@
   </div>
 </div>
 
+<!-- Модальное окно для оценки -->
 <div id="gradeModal" class="modal">
   <div class="modal-content">
     <h2 id="gradeModalTitle">Добавить оценку</h2>
@@ -189,5 +185,358 @@
   </div>
 </div>
 
+<!-- Модальное окно для управления предметами -->
+<div id="subjectManagerModal" class="modal">
+  <div class="modal-content modal-lg">
+    <h2>Управление предметами</h2>
+    <div class="subject-list" id="subjectList">
+      <!-- Сюда будет загружаться список предметов -->
+      <p>Загрузка...</p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" onclick="showAddSubjectForm()">➕ Добавить предмет</button>
+      <button class="btn btn-secondary" onclick="closeSubjectManager()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для создания/редактирования предмета (всплывает поверх manager) -->
+<div id="subjectFormModal" class="modal" style="z-index: 2000;">
+  <div class="modal-content">
+    <h2 id="subjectFormTitle">Добавить предмет</h2>
+    <form id="subjectForm">
+      <input type="hidden" id="subjectId" name="subjectId">
+
+      <div class="form-group">
+        <label for="subjectName">Название предмета *</label>
+        <input type="text" id="subjectName" name="name" required maxlength="50">
+      </div>
+
+      <div class="form-group">
+        <label for="subjectDescription">Описание (необязательно)</label>
+        <textarea id="subjectDescription" name="description" rows="2" style="resize: none"></textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSubjectForm()">Отмена</button>
+        <button type="button" class="btn btn-danger" id="deleteSubjectBtn" style="display: none;" onclick="deleteSubjectFromForm()">Удалить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления предмета -->
+<div id="confirmSubjectDeleteModal" class="modal" style="z-index: 2100;">
+  <div class="modal-content" style="max-width: 400px;">
+    <h3>Подтверждение удаления</h3>
+    <p id="confirmSubjectMessage">Вы уверены, что хотите удалить предмет?</p>
+    <div class="modal-buttons">
+      <button class="btn btn-danger" onclick="confirmDeleteSubject()">Удалить</button>
+      <button class="btn btn-secondary" onclick="closeConfirmDeleteModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <script src="{{ url_for('static', path='js/diary.js') }}"></script>
+
+<!-- Дополнительный JavaScript для управления предметами -->
+<script>
+  // Переменные для хранения состояния
+  let currentSubjects = [];
+  let subjectToDelete = null;
+
+  // Открыть менеджер предметов
+  function openSubjectManager() {
+    document.getElementById('subjectManagerModal').style.display = 'flex';
+    loadSubjectsList();
+  }
+
+  // Закрыть менеджер предметов
+  function closeSubjectManager() {
+    document.getElementById('subjectManagerModal').style.display = 'none';
+  }
+
+  // Загрузить список предметов с сервера
+  function loadSubjectsList() {
+    const container = document.getElementById('subjectList');
+    container.innerHTML = '<p>Загрузка...</p>';
+
+    fetch('/diary/api/subjects')
+            .then(response => {
+              if (!response.ok) throw new Error('Ошибка загрузки');
+              return response.json();
+            })
+            .then(subjects => {
+              currentSubjects = subjects;
+              if (subjects.length === 0) {
+                container.innerHTML = '<p class="empty-state">Пока нет предметов. Создайте первый!</p>';
+                return;
+              }
+
+              let html = '<div class="subjects-grid">';
+              subjects.forEach(subj => {
+                html += `
+                    <div class="subject-card" data-id="${subj.id}">
+                        <div class="subject-info">
+                            <strong>${escapeHtml(subj.name)}</strong>
+                            ${subj.description ? `<small>${escapeHtml(subj.description)}</small>` : ''}
+                        </div>
+                        <div class="subject-actions">
+                            <button class="btn-icon" onclick="editSubject(${subj.id})" title="Редактировать">✏️</button>
+                            <button class="btn-icon" onclick="promptDeleteSubject(${subj.id}, '${escapeHtml(subj.name)}')" title="Удалить">🗑️</button>
+                        </div>
+                    </div>
+                `;
+              });
+              html += '</div>';
+              container.innerHTML = html;
+            })
+            .catch(error => {
+              console.error(error);
+              container.innerHTML = '<p class="error">Ошибка загрузки предметов</p>';
+            });
+  }
+
+  // Экранирование HTML для предотвращения XSS
+  function escapeHtml(unsafe) {
+    return unsafe.replace(/[&<>"]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      if (m === '"') return '&quot;';
+      return m;
+    });
+  }
+
+  // Показать форму добавления предмета
+  function showAddSubjectForm() {
+    document.getElementById('subjectFormTitle').textContent = 'Добавить предмет';
+    document.getElementById('subjectId').value = '';
+    document.getElementById('subjectName').value = '';
+    document.getElementById('subjectDescription').value = '';
+    document.getElementById('deleteSubjectBtn').style.display = 'none';
+    document.getElementById('subjectFormModal').style.display = 'flex';
+  }
+
+  // Редактирование предмета
+  function editSubject(subjectId) {
+    const subject = currentSubjects.find(s => s.id === subjectId);
+    if (!subject) return;
+
+    document.getElementById('subjectFormTitle').textContent = 'Редактировать предмет';
+    document.getElementById('subjectId').value = subject.id;
+    document.getElementById('subjectName').value = subject.name;
+    document.getElementById('subjectDescription').value = subject.description || '';
+    document.getElementById('deleteSubjectBtn').style.display = 'block';
+    document.getElementById('subjectFormModal').style.display = 'flex';
+  }
+
+  // Закрыть форму предмета
+  function closeSubjectForm() {
+    document.getElementById('subjectFormModal').style.display = 'none';
+  }
+
+  // Сохранение предмета (обработчик формы)
+  document.addEventListener('DOMContentLoaded', function() {
+    const subjectForm = document.getElementById('subjectForm');
+    if (subjectForm) {
+      subjectForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const subjectId = document.getElementById('subjectId').value;
+        const formData = {
+          name: document.getElementById('subjectName').value.trim(),
+          description: document.getElementById('subjectDescription').value.trim() || null
+        };
+
+        if (!formData.name) {
+          alert('Введите название предмета');
+          return;
+        }
+
+        const url = subjectId ? `/diary/api/subjects/${subjectId}` : '/diary/api/subjects';
+        const method = subjectId ? 'PUT' : 'POST';
+
+        fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
+                .then(response => {
+                  if (!response.ok) {
+                    return response.json().then(data => {
+                      throw new Error(data.detail || 'Ошибка сохранения');
+                    });
+                  }
+                  return response.json();
+                })
+                .then(() => {
+                  closeSubjectForm();
+                  // Обновляем список предметов в менеджере
+                  loadSubjectsList();
+                  // Обновляем селекты в модальных окнах (они перезагрузятся при следующем открытии, но можно и обновить)
+                  // Для простоты перезагрузим страницу, чтобы селекты точно обновились
+                  location.reload(); // можно заменить на более умное обновление, но для демо сойдёт
+                })
+                .catch(error => {
+                  alert(error.message);
+                });
+      });
+    }
+  });
+
+  // Подтверждение удаления предмета
+  function promptDeleteSubject(subjectId, subjectName) {
+    subjectToDelete = subjectId;
+    document.getElementById('confirmSubjectMessage').textContent = `Удалить предмет «${subjectName}»? Это действие нельзя отменить.`;
+    document.getElementById('confirmSubjectDeleteModal').style.display = 'flex';
+  }
+
+  function closeConfirmDeleteModal() {
+    document.getElementById('confirmSubjectDeleteModal').style.display = 'none';
+    subjectToDelete = null;
+  }
+
+  function confirmDeleteSubject() {
+    if (!subjectToDelete) return;
+
+    fetch(`/diary/api/subjects/${subjectToDelete}`, {
+      method: 'DELETE'
+    })
+            .then(response => {
+              if (!response.ok) {
+                return response.json().then(data => {
+                  throw new Error(data.detail || 'Ошибка удаления');
+                });
+              }
+              return response.json();
+            })
+            .then(() => {
+              closeConfirmDeleteModal();
+              loadSubjectsList();
+              location.reload(); // обновляем страницу для обновления селектов
+            })
+            .catch(error => {
+              alert(error.message);
+              closeConfirmDeleteModal();
+            });
+  }
+
+  // Удаление из формы редактирования (кнопка "Удалить")
+  function deleteSubjectFromForm() {
+    const subjectId = document.getElementById('subjectId').value;
+    if (subjectId) {
+      promptDeleteSubject(subjectId, document.getElementById('subjectName').value);
+      closeSubjectForm();
+    }
+  }
+
+  // Закрытие модальных окон по клику на фон
+  window.onclick = function(event) {
+    const modals = ['lessonModal', 'gradeModal', 'subjectManagerModal', 'subjectFormModal', 'confirmSubjectDeleteModal'];
+    modals.forEach(id => {
+      const modal = document.getElementById(id);
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+
+  // Добавляем стили для новых элементов
+  const style = document.createElement('style');
+  style.textContent = `
+    .diary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .diary-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .lesson-item {
+        position: relative;
+    }
+    .quick-add-grade {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+    .lesson-item:hover .quick-add-grade {
+        opacity: 1;
+    }
+    .modal.modal-lg .modal-content {
+        max-width: 600px;
+    }
+    .subjects-grid {
+        display: grid;
+        gap: 0.75rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
+    .subject-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    .subject-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .subject-info small {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    .subject-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .btn-icon {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+    .btn-icon:hover {
+        background: var(--bg-hover);
+    }
+    .empty-state {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 2rem;
+    }
+    .error {
+        color: var(--error-color);
+        text-align: center;
+    }
+`;
+  document.head.appendChild(style);
+</script>
 {% endblock %}
