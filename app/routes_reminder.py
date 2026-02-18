@@ -1,3 +1,8 @@
+# ==================== routes_reminder.py ====================
+"""
+Модуль для получения напоминаний о предстоящих домашних заданиях.
+"""
+
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -6,6 +11,7 @@ from .models import User, Lesson
 from .auth import get_current_user
 
 router = APIRouter()
+
 
 @router.get("/api/reminders/upcoming")
 async def upcoming_reminders(

@@ -1,3 +1,8 @@
+"""
+Модуль дополнительных API-маршрутов для дневника, в частности для
+генерации уроков из шаблона расписания.
+"""
+
 from datetime import date, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
@@ -18,6 +23,11 @@ async def generate_lessons_from_template(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Генерирует уроки на ближайшие 14 дней на основе шаблона расписания пользователя.
+    Если урок уже существует, обновляет его (предмет, время, кабинет).
+    Возвращает количество созданных/обновлённых уроков.
+    """
     try:
         templates = db.query(TimetableTemplate).filter(
             TimetableTemplate.user_id == current_user.id
@@ -47,11 +57,13 @@ async def generate_lessons_from_template(
                 ).first()
 
                 if existing_lesson:
+                    # Обновляем существующий урок
                     existing_lesson.subject_id = template.subject_id
                     existing_lesson.start_time = template.start_time
                     existing_lesson.end_time = template.end_time
                     existing_lesson.room = template.room
                 else:
+                    # Создаём новый урок
                     new_lesson = Lesson(
                         user_id=current_user.id,
                         subject_id=template.subject_id,

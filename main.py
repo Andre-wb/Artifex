@@ -25,7 +25,6 @@ from app.routes_warnings import router as warnings_router
 from app.routes_reminder import router as reminder_router
 from app.routes_auth import router as auth_router
 from app.routes_profile import router as profile_router
-from app.routes_pages import router as pages_router
 from app.routes_diary_api import router as diary_api_router
 from app.routes_ai import router as ai_router
 from app.routes_youtube import router as materials_router
@@ -123,7 +122,6 @@ app.include_router(reminder_router)
 app.include_router(gamification_router)
 app.include_router(auth_router)
 app.include_router(profile_router)
-app.include_router(pages_router)
 app.include_router(diary_api_router)
 app.include_router(ai_router)
 app.include_router(materials_router)

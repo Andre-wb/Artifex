@@ -1,3 +1,9 @@
+"""
+Модуль маршрутов для учителей.
+Позволяет создавать классы (группы), управлять кодами приглашения,
+просматривать учеников и неподтверждённые уроки с вложениями.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -17,7 +23,10 @@ async def create_group(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
-    """Создаёт новый класс и генерирует код приглашения."""
+    """
+    Создаёт новый класс (группу) и генерирует уникальный код приглашения.
+    Можно указать срок действия кода (expires_in_days).
+    """
     while True:
         code = generative_invite_code()
         existing = db.query(models.Group).filter(models.Group.invite_code == code).first()
@@ -50,6 +59,10 @@ async def get_my_groups(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
+    """
+    Возвращает список классов, созданных текущим учителем,
+    с количеством участников в каждом.
+    """
     groups = db.query(models.Group).filter(models.Group.teacher_id == current_user.id).all()
     result = []
     for g in groups:
@@ -66,6 +79,10 @@ async def get_group_members(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
+    """
+    Возвращает список участников конкретного класса (группы).
+    Доступно только учителю, создавшему группу.
+    """
     group = db.query(models.Group).filter(
         models.Group.id == group_id,
         models.Group.teacher_id == current_user.id
@@ -94,6 +111,9 @@ async def deactivate_group(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
+    """
+    Деактивирует код приглашения для группы (делает is_active=False).
+    """
     group = db.query(models.Group).filter(
         models.Group.id == group_id,
         models.Group.teacher_id == current_user.id
@@ -113,6 +133,10 @@ async def regenerate_code(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
+    """
+    Генерирует новый код приглашения для группы, заменяя старый.
+    Можно задать новый срок действия.
+    """
     group = db.query(models.Group).filter(
         models.Group.id == group_id,
         models.Group.teacher_id == current_user.id
@@ -140,6 +164,7 @@ async def regenerate_code(
         "is_active": group.is_active
     }
 
+
 @router.get("/pending-lessons")
 async def get_pending_lessons(
         db: Session = Depends(get_db),
@@ -147,7 +172,7 @@ async def get_pending_lessons(
 ):
     """
     Возвращает уроки учеников текущего учителя, у которых есть вложения
-    и которые ещё не подтверждены.
+    и которые ещё не подтверждены (teacher_confirmed=False).
     """
     lessons = db.query(models.Lesson).join(
         models.User, models.Lesson.user_id == models.User.id

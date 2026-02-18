@@ -1,39 +1,22 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, Form, Response, FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+"""
+Модуль маршрутов для учеников.
+Содержит эндпоинты для присоединения к классу по коду и просмотра своих классов.
+"""
+
+from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, bindparam
-from typing import Optional
-from sqlalchemy.exc import IntegrityError
-import re
-import logging
-import smtplib
-from datetime import datetime, timedelta
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import time
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-import os
-from datetime import datetime, timedelta, date
-from sqlalchemy.orm import Session
+from datetime import datetime
 
 from . import models, schemas
 from .config import Config
 from .database import get_db
-from .auth import (
-    get_current_user
-)
+from .auth import get_current_user
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
-app = FastAPI()
-
-logger = logging.getLogger(__name__)
-
-JWT_SECRET = os.getenv('SECRET_KEY')
-serializer = URLSafeTimedSerializer(JWT_SECRET)
 
 is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONMENT') else False
+
 
 @router.post("/user/join-group")
 async def join_group(
@@ -42,7 +25,10 @@ async def join_group(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Присоединение ученика к классу по коду приглашения."""
+    """
+    Присоединение ученика к классу (группе) по коду приглашения.
+    Если у пользователя ещё не заполнены школа и класс, они заполняются из группы.
+    """
     group = db.query(models.Group).filter(
         models.Group.invite_code == join_data.invite_code,
         models.Group.is_active == True
@@ -64,6 +50,7 @@ async def join_group(
     member = models.GroupMember(group_id=group.id, user_id=current_user.id)
     db.add(member)
 
+    # Если у ученика нет школы/класса, заполняем из группы
     if not current_user.school:
         current_user.school = group.school
     if not current_user.grade:
@@ -87,7 +74,9 @@ async def get_my_groups(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Возвращает список классов, в которых состоит ученик."""
+    """
+    Возвращает список классов (групп), в которых состоит ученик.
+    """
     memberships = db.query(models.GroupMember).filter(
         models.GroupMember.user_id == current_user.id
     ).all()

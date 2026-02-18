@@ -1,7 +1,12 @@
+"""
+Модуль для поиска образовательных материалов на YouTube.
+"""
+
 from fastapi import APIRouter, Depends, Query
 from .youtube_search import search_youtube
 
 router = APIRouter()
+
 
 @router.get("/api/materials/search")
 async def search_materials(
@@ -10,6 +15,7 @@ async def search_materials(
 ):
     """
     Ищет образовательные видео на YouTube по заданной теме.
+    Возвращает список результатов с заголовком, URL, превью и описанием.
     """
     results = search_youtube(q, max_results)
     return {"success": True, "results": results}

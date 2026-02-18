@@ -1,3 +1,8 @@
+"""
+Модуль маршрутов для управления учебными периодами (четверти, полугодия)
+и итоговыми оценками. Доступ к некоторым эндпоинтам ограничен учителями.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -10,33 +15,47 @@ from .database import get_db
 
 router = APIRouter(prefix="/academic", tags=["academic"])
 
+
 @router.post("/terms", response_model=schemas.AcademicTermOut)
 def create_term(
         term: schemas.AcademicTermCreate,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
-    """Создать новый учебный период (четверть, полугодие, год). Доступно только учителям."""
+    """
+    Создаёт новый учебный период (четверть, полугодие, год).
+
+    - **term**: данные периода (название, тип, даты, учебный год)
+    - Доступно только пользователям с ролью учителя (is_teacher=True).
+    """
     db_term = models.AcademicTerm(**term.dict())
     db.add(db_term)
     db.commit()
     db.refresh(db_term)
     return db_term
 
+
 @router.get("/terms", response_model=List[schemas.AcademicTermOut])
 def list_terms(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получить список всех учебных периодов."""
+    """
+    Возвращает список всех учебных периодов, отсортированных по дате начала.
+    Доступно всем аутентифицированным пользователям.
+    """
     return db.query(models.AcademicTerm).order_by(models.AcademicTerm.start_date).all()
+
 
 @router.get("/terms/current", response_model=schemas.AcademicTermOut)
 def get_current_term(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получить текущий учебный период (по today)."""
+    """
+    Возвращает текущий учебный период (дата сегодня попадает в интервал).
+    Если такого периода нет, возвращает 404.
+    """
     today = date.today()
     term = db.query(models.AcademicTerm).filter(
         models.AcademicTerm.start_date <= today,
@@ -46,16 +65,24 @@ def get_current_term(
         raise HTTPException(status_code=404, detail="Нет активного учебного периода")
     return term
 
+
 def calculate_final_grade(user_id: int, subject_id: int, term_id: int, db: Session) -> Optional[int]:
     """
-    Рассчитывает итоговую оценку за период по средневзвешенному.
+    Вспомогательная функция для расчёта итоговой оценки за период
+    по средневзвешенному всех оценок пользователя по предмету.
+
     Возвращает целое число (2-5) или None, если нет оценок.
     """
+    # Получаем период, чтобы ограничить даты оценок
+    term = db.query(models.AcademicTerm).filter(models.AcademicTerm.id == term_id).first()
+    if not term:
+        return None
+
     grades = db.query(models.Grade).filter(
         models.Grade.user_id == user_id,
         models.Grade.subject_id == subject_id,
-        models.Grade.date >= models.AcademicTerm.start_date,
-        models.Grade.date <= models.AcademicTerm.end_date
+        models.Grade.date >= term.start_date,
+        models.Grade.date <= term.end_date
     ).all()
 
     if not grades:
@@ -68,6 +95,7 @@ def calculate_final_grade(user_id: int, subject_id: int, term_id: int, db: Sessi
     weighted_sum = sum(g.value * g.weight for g in grades)
     average = weighted_sum / total_weight
 
+    # Преобразование среднего балла в пятибалльную шкалу
     if average >= 4.5:
         return 5
     elif average >= 3.5:
@@ -77,6 +105,7 @@ def calculate_final_grade(user_id: int, subject_id: int, term_id: int, db: Sessi
     else:
         return 2
 
+
 @router.post("/final/calculate")
 def calculate_final_grades(
         req: schemas.TermGradeRequest,
@@ -84,8 +113,11 @@ def calculate_final_grades(
         current_user: models.User = Depends(get_current_teacher_user)
 ):
     """
-    Рассчитать и сохранить (или обновить) итоговые оценки для всех учеников (или одного) за указанный период.
-    Только для учителей.
+    Рассчитывает и сохраняет (или обновляет) итоговые оценки для всех учеников
+    (или одного, если указан user_id) по указанному периоду и предмету (или всем).
+
+    - **req**: содержит term_id, опционально user_id и subject_id.
+    - Доступно только учителям.
     """
     term = db.query(models.AcademicTerm).filter(models.AcademicTerm.id == req.term_id).first()
     if not term:
@@ -132,17 +164,22 @@ def calculate_final_grades(
     db.commit()
     return {"calculated": results}
 
+
 @router.get("/final/my", response_model=List[schemas.FinalGradeOut])
 def get_my_final_grades(
         term_id: Optional[int] = None,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получить свои итоговые оценки (ученик). Если term_id не указан, за все периоды."""
+    """
+    Возвращает итоговые оценки текущего пользователя (ученика).
+    Если term_id указан, возвращает только за указанный период.
+    """
     query = db.query(models.FinalGrade).filter(models.FinalGrade.user_id == current_user.id)
     if term_id:
         query = query.filter(models.FinalGrade.term_id == term_id)
     return query.order_by(models.FinalGrade.term_id, models.FinalGrade.subject_id).all()
+
 
 @router.get("/final/student/{student_id}", response_model=List[schemas.FinalGradeOut])
 def get_student_final_grades(
@@ -151,7 +188,9 @@ def get_student_final_grades(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
-    """Учитель может посмотреть итоговые оценки конкретного ученика."""
+    """
+    Учитель может просмотреть итоговые оценки конкретного ученика.
+    """
     student = db.query(models.User).filter(models.User.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Ученик не найден")
@@ -160,6 +199,7 @@ def get_student_final_grades(
         query = query.filter(models.FinalGrade.term_id == term_id)
     return query.order_by(models.FinalGrade.term_id, models.FinalGrade.subject_id).all()
 
+
 @router.put("/final/{final_grade_id}", response_model=schemas.FinalGradeOut)
 def update_final_grade(
         final_grade_id: int,
@@ -167,7 +207,10 @@ def update_final_grade(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_teacher_user)
 ):
-    """Ручная корректировка итоговой оценки учителем."""
+    """
+    Ручная корректировка итоговой оценки учителем.
+    Позволяет изменить значение и добавить комментарий.
+    """
     final_grade = db.query(models.FinalGrade).filter(models.FinalGrade.id == final_grade_id).first()
     if not final_grade:
         raise HTTPException(status_code=404, detail="Итоговая оценка не найдена")

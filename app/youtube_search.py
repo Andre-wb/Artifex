@@ -1,8 +1,18 @@
+"""
+Модуль для взаимодействия с YouTube Data API v3.
+Предоставляет функцию поиска видео по ключевым словам.
+"""
+
 import os
 from googleapiclient.discovery import build
 from .config import Config
 
+
 def search_youtube(query: str, max_results: int = 5):
+    """
+    Выполняет поиск видео на YouTube по заданному запросу.
+    Возвращает список словарей с информацией о видео (title, url, thumbnail, description).
+    """
     try:
         youtube = build("youtube", "v3", developerKey=Config.YOUTUBE_API_KEY)
         request = youtube.search().list(
