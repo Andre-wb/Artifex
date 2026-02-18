@@ -46,7 +46,7 @@ from .security_utils import (
 from .create_csrf_cookie import create_csrf_cookie
 from .ai_funcs import ask_support
 from .schemas import HomeworkHelpRequest, AIRequest
-
+from .ocr import extract_text_from_image
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -1175,3 +1175,23 @@ async def ask_ai(
             "success": False,
             "error": "Не удалось получить объяснение. Попробуйте позже."
         }, status_code=500)
+
+
+@router.get("/ocr", response_class=HTMLResponse)
+async def ocr_page(request: Request):
+    """Страница загрузки изображения для OCR"""
+    html_content = """
+    <h2> Распознавание текста</h2>
+    <form action="/ocr" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <button type="submit">Распознать</button>
+    </form>
+    """
+    return HTMLResponse(content=html_content)
+
+@router.post("/ocr")
+async def ocr_upload(file: UploadFile = File(...)):
+    """Принимает изображение, возвращает распознанный текст"""
+    contents = await file.read()
+    text = extract_text_from_image(contents)
+    return {"filename": file.filename, "text": text}
