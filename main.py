@@ -36,16 +36,6 @@ from app.telegram_bot import start_bot, send_reminders
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
 
-# Монтируем директорию со статическими файлами (CSS, JS, изображения)
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Настройка базового логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 # Конфигурация WAF (Web Application Firewall)
 waf_config = {
     'rate_limit_requests': 100,
@@ -57,6 +47,18 @@ waf_config = {
     'log_level': 'INFO',
     'safe_params': ['csrf_token', '_csrf', 'csrfmiddlewaretoken', 'authenticity_token']
 }
+
+waf_engine = setup_waf(app, waf_config)
+
+# Монтируем директорию со статическими файлами (CSS, JS, изображения)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Настройка базового логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Создаем планировщик
 scheduler = AsyncIOScheduler()
@@ -95,14 +97,14 @@ async def startup_event():
     # Запускаем планировщик
     scheduler.start()
     logger.info("Планировщик задач запущен. Анализ нагрузки будет выполняться каждые 30 минут.")
-    waf_engine = setup_waf(app, waf_config)
 
     # Инициализация ключей
     key_manager.initialize()
     if key_manager.should_rotate_keys():
         key_manager.rotate_keys()
 
-    asyncio.create_task(start_bot())
+    start_bot()
+
     logger.info("Telegram бот запущен")
     scheduler.add_job(
         send_reminders,
