@@ -5,22 +5,18 @@
 {% endblock %}
 {% block content %}
 <div class="form-container">
-  <h2>Подтверждение входа</h2>
+  <h2 class="text-inverter">Подтверждение входа</h2>
   <br>
-  <p>На ваш email <strong>{{ email }}</strong> отправлен код подтверждения. Введите его ниже.</p>
+  <p class="text-inverter">На ваш email <strong>{{ email }}</strong> отправлен код подтверждения. Введите его ниже.</p>
   <br>
   <form method="POST" action="/verify-2fa">
     <div class="form-group">
-      <label for="code">Код подтверждения</label>
-      <input type="text" id="code" name="code" class="input" required pattern="\d{6}" maxlength="6" autocomplete="off">
+      <label for="code" class="text-inverter">Код подтверждения</label>
+      <input type="text" id="code" name="code" class="input" required pattern="\d{6}" maxlength="6" autocomplete="off" style="margin-top:10px;">
     </div>
-
     <button type="submit" class="button-login">Подтвердить</button>
   </form>
-
-  <p class="register-text">
-    Не получили код? <a href="#" onclick="resendCode()">Отправить снова</a>
-  </p>
+    <a href="#" onclick="resendCode()" class="register-link">Не получили код? Отправить снова</a>
 </div>
 
 <script>

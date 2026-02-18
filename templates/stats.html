@@ -3,20 +3,11 @@
 {% block title %}Статистика{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/stats.css') }}">
-<style>
-  /* Стили для ролей */
-  .teacher-only {
-    display: {% if user and user.is_teacher %}block{% else %}none{% endif %};
-  }
-  .student-only {
-    display: {% if user and not user.is_teacher %}block{% else %}none{% endif %};
-  }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
 {% endblock %}
 
 {% block content %}
-<h1>📊 Статистика и оценки</h1>
+<h1><img src="{{ url_for('static', path='assets/bx-bar-chart-alt-2.svg') }}" class="invert"> Статистика и оценки</h1>
 
 <div class="stats-container">
   <div class="filter-section">
@@ -37,8 +28,7 @@
       <input type="date" id="dateTo" onchange="applyFilters()">
     </div>
 
-    <!-- Кнопка добавления оценки - только для учителей -->
-    <button class="btn-add-grade teacher-only" onclick="showAddGradeModal()">
+    <button class="btn-add-grade" onclick="showAddGradeModal()">
       + Добавить оценку
     </button>
   </div>
@@ -57,8 +47,7 @@
         <th>Вес</th>
         <th>Описание</th>
         <th>Урок</th>
-        <!-- Колонка действий - только для учителей -->
-        <th class="teacher-only">Действия</th>
+        <th>Действия</th>
       </tr>
       </thead>
       <tbody></tbody>
@@ -66,8 +55,7 @@
   </div>
 </div>
 
-<!-- Модальное окно для добавления оценки - только для учителей -->
-<div id="gradeModal" class="modal teacher-only" style="display: none;">
+<div id="gradeModal" class="modal">
   <div class="modal-content">
     <h2 id="gradeModalTitle">Добавить оценку</h2>
     <form id="gradeForm">
@@ -113,13 +101,6 @@
         <input type="text" id="gradeDescription" name="description" placeholder="Контрольная работа, Ответ у доски...">
       </div>
 
-      <div class="form-group">
-        <label for="gradeStudent">Ученик</label>
-        <select id="gradeStudent" name="user_id">
-          <option value="">Выберите ученика</option>
-        </select>
-      </div>
-
       <div class="modal-buttons">
         <button type="submit" class="btn btn-primary">Сохранить</button>
         <button type="button" class="btn btn-secondary" onclick="closeGradeModal()">Отмена</button>
@@ -129,5 +110,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', path='js/stats.js') }}"></script>
+<script src="{{ url_for('static', filename='js/stats.js') }}"></script>
 {% endblock %}

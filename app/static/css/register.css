@@ -97,7 +97,6 @@
     padding: 18px 16px 18px 48px;
     font-size: 16px;
     border: none;
-    background: transparent;
     border-radius: 14px;
     transition: all var(--transition-fast, 0.2s);
     color: var(--text-primary, #1e293b);
@@ -134,7 +133,8 @@
 
 .input:focus {
     outline: none;
-    background: rgba(102, 126, 234, 0.03);
+    background: var(--bg-lesson-hover, white);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
 }
 
 .input::placeholder {

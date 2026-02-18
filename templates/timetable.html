@@ -4,14 +4,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/templates.css') }}">
-<style>
-    .teacher-only {
-        display: {% if user and user.is_teacher %}block{% else %}none{% endif %};
-    }
-    .student-only {
-        display: {% if user and not user.is_teacher %}block{% else %}none{% endif %};
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -38,8 +30,7 @@
                     Время не указано
                     {% endif %}
                 </div>
-                <!-- Действия только для учителей -->
-                <div class="lesson-actions teacher-only">
+                <div class="lesson-actions">
                     <button onclick="editTemplate({{ template.id }})" class="edit-btn" title="Редактировать">✏️</button>
                     <button onclick="deleteTemplate({{ template.id }})" class="delete-btn" title="Удалить">🗑️</button>
                 </div>
@@ -47,16 +38,15 @@
             {% endfor %}
         </div>
 
-        <!-- Кнопка добавления урока только для учителей -->
-        <button class="add-lesson-btn teacher-only" onclick="showAddTemplateModal({{ day_index }})">
+        <button class="add-lesson-btn" onclick="showAddTemplateModal({{ day_index }})">
             + Добавить урок в {{ weekdays[day_index]|lower }}
         </button>
     </div>
     {% endfor %}
 </div>
 
-<!-- Модальное окно для добавления/редактирования урока - только для учителей -->
-<div id="templateModal" class="modal teacher-only" style="display: none;">
+<!-- Модальное окно для добавления/редактирования урока -->
+<div id="templateModal" class="modal">
     <div class="modal-content">
         <h2 id="modalTitle">Добавить урок в шаблон</h2>
         <form id="templateForm">
@@ -109,8 +99,8 @@
     </div>
 </div>
 
-<!-- Модальное окно для добавления нового предмета - только для учителей -->
-<div id="newSubjectModal" class="modal teacher-only" style="display: none;">
+<!-- Модальное окно для добавления нового предмета -->
+<div id="newSubjectModal" class="modal">
     <div class="modal-content small-modal">
         <h2>➕ Новый предмет</h2>
         <form id="newSubjectForm" onsubmit="createNewSubject(event)">
@@ -135,8 +125,8 @@
     </div>
 </div>
 
-<!-- Подтверждение удаления - только для учителей -->
-<div id="confirmModal" class="modal teacher-only" style="display: none;">
+<!-- Подтверждение удаления -->
+<div id="confirmModal" class="modal">
     <div class="modal-content small-modal">
         <h2>⚠️ Подтверждение</h2>
         <p id="confirmMessage">Вы уверены, что хотите удалить этот урок?</p>
@@ -148,26 +138,4 @@
 </div>
 
 <script src="{{ url_for('static', path='js/add_lesson.js') }}"></script>
-<script>
-    // Дополнительная проверка роли на клиенте
-    document.addEventListener('DOMContentLoaded', function() {
-        const isTeacher = {{ 'true' if user and user.is_teacher else 'false' }};
-
-        // Переопределяем функции для учеников
-        if (!isTeacher) {
-            window.showAddTemplateModal = function() {
-                alert('Только учителя могут редактировать расписание');
-            };
-            window.editTemplate = function() {
-                alert('Только учителя могут редактировать расписание');
-            };
-            window.deleteTemplate = function() {
-                alert('Только учителя могут удалять уроки');
-            };
-            window.showNewSubjectModal = function() {
-                alert('Только учителя могут создавать предметы');
-            };
-        }
-    });
-</script>
 {% endblock %}
