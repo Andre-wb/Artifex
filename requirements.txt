@@ -32,3 +32,4 @@ apscheduler==3.11.2
 certifi
 google-api-python-client
 setuptools
+telebot

@@ -31,6 +31,7 @@ from app.routes_youtube import router as materials_router
 from apscheduler.triggers.interval import IntervalTrigger
 from app.routes_pages import router as pages_router
 from app.routes_teacher import router as teacher_router
+from app.telegram_bot import start_bot, send_reminders
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -93,16 +94,23 @@ async def startup_event():
 
     # Запускаем планировщик
     scheduler.start()
-    logger.info("Планировщик задач запущен. Ежедневный анализ запланирован на 20:00")
-
-    # Инициализация WAF (раскомментируйте если нужно)
-    # waf_engine = setup_waf(app, waf_config)
+    logger.info("Планировщик задач запущен. Анализ нагрузки будет выполняться каждые 30 минут.")
+    waf_engine = setup_waf(app, waf_config)
 
     # Инициализация ключей
     key_manager.initialize()
     if key_manager.should_rotate_keys():
         key_manager.rotate_keys()
 
+    asyncio.create_task(start_bot())
+    logger.info("Telegram бот запущен")
+    scheduler.add_job(
+        send_reminders,
+        IntervalTrigger(minutes=15),
+        id="send_telegram_reminders",
+        replace_existing=True
+    )
+    logger.info("Задача отправки напоминаний добавлена")
     logger.info("Приложение успешно запущено")
 
 @app.on_event("shutdown")

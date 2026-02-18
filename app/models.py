@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text, Float, BigInteger
 from sqlalchemy.orm import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from .database import Base
@@ -25,6 +25,7 @@ class User(Base):
     school = Column(String(100), nullable=True)
     grade = Column(String(20), nullable=True)
     is_teacher = Column(Boolean, default=False)
+    telegram_id = Column(BigInteger, unique=True, nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
