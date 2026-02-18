@@ -1,12 +1,13 @@
+import ssl
+import certifi
+ssl._create_default_https_context = ssl.create_default_context(cafile=certifi.where())
+
 import io
 import easyocr
 from PIL import Image
-import ssl
-import certifi
 
 # глобальный OCR-движок, чтобы не грузился заново на каждый запрос
 reader = easyocr.Reader(['en', 'ru'])
-ssl._create_default_https_context = ssl.create_default_context(cafile=certifi.where())
 
 def extract_text_from_image(image_bytes: bytes) -> str:
     """
