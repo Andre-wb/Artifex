@@ -267,5 +267,6 @@ class LoadWarning(Base):
     date = Column(Date, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
+    reminder_hours_before = Column(Integer, default=24, nullable=False)
 
     user = relationship("User", backref="load_warnings")

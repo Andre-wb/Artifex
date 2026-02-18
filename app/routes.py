@@ -62,6 +62,21 @@ is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONME
 def get_server_time() -> str:
     return time.strftime('%Y-%m-%d %H:%M:%S')
 
+def render_edit_profile_error(request, user, username, school, grade, error_msg):
+    new_cookie_token, new_form_token = generate_double_csrf_token()
+    response = templates.TemplateResponse("edit_profile.html", {
+        "request": request,
+        "error": error_msg,
+        "user": user,
+        "username": username,
+        "school": school,
+        "grade": grade,
+        "reminder_hours": user.reminder_hours_before,  # текущее значение не меняем
+        "csrf_token": new_form_token
+    })
+    create_csrf_cookie(response, new_cookie_token)
+    return response
+
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("base.html", {"request": request})
@@ -789,6 +804,7 @@ async def edit_profile_page(request: Request, user: User = Depends(get_current_u
         "school": user.school or "",
         "grade": user.grade or "",
         "is_teacher": user.is_teacher,
+        "reminder_hours": user.reminder_hours_before,
         "csrf_token": form_token
     })
     create_csrf_cookie(response, cookie_token)
@@ -803,6 +819,7 @@ async def edit_profile(
         username: str = Form(...),
         school: str = Form(...),
         grade: str = Form(None),
+        reminder_hours: int = Form(24),
         csrf_token: str = Form(...),
         db: Session = Depends(get_db),
         user: User = Depends(get_current_user)
@@ -888,10 +905,16 @@ async def edit_profile(
         create_csrf_cookie(response, new_cookie_token)
         return response
 
+    if reminder_hours < 1 or reminder_hours > 48:
+        return render_edit_profile_error(
+            request, user, username, school, grade,
+            "Количество часов должно быть от 1 до 48"
+        )
+
     user.username = username
     user.school = school
-    if grade is not None:
-        user.grade = grade
+    user.grade = grade if not user.is_teacher else None
+    user.reminder_hours_before = reminder_hours
     user.updated_at = datetime.utcnow()
     db.commit()
 
