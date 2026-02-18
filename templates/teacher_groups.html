@@ -198,17 +198,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Название класса *</label>
-                    <input type="text" name="name" required placeholder="Например: 7А">
+                    <input type="text" id="groupName" name="name" required placeholder="Например: 7А">
                 </div>
                 <div class="form-group">
                     <label>Школа *</label>
-                    <input type="text" name="school" required placeholder="Номер или название школы">
+                    <input type="text" id="groupSchool" name="school" required placeholder="Номер или название школы">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label>Срок действия кода (дней)</label>
-                    <input type="number" name="expires_in_days" value="30" min="1" max="365">
+                    <input type="number" id="groupExpires" name="expires_in_days" value="30" min="1" max="365">
                 </div>
             </div>
             <button type="submit" class="btn-create">Создать класс</button>
@@ -225,7 +225,7 @@
             </div>
 
             <div class="invite-code">
-                <span>{{ group.invite_code }}</span>
+                <span id="code-{{ group.id }}">{{ group.invite_code }}</span>
                 <button class="copy-btn" onclick="copyCode('{{ group.invite_code }}')">Копировать</button>
             </div>
 
@@ -257,8 +257,10 @@
 <script>
     function createGroup(event) {
         event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
+
+        const name = document.getElementById('groupName').value;
+        const school = document.getElementById('groupSchool').value;
+        const expires_in_days = parseInt(document.getElementById('groupExpires').value);
 
         fetch('/teacher/groups', {
             method: 'POST',
@@ -266,14 +268,20 @@
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                name: formData.get('name'),
-                school: formData.get('school'),
-                expires_in_days: parseInt(formData.get('expires_in_days'))
+                name: name,
+                school: school,
+                expires_in_days: expires_in_days
             })
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка при создании группы');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.id) {
+                    alert('Группа успешно создана!');
                     location.reload();
                 } else {
                     alert('Ошибка при создании группы');
@@ -298,16 +306,24 @@
             fetch(`/teacher/groups/${groupId}/members`)
                 .then(response => response.json())
                 .then(data => {
-                    membersDiv.innerHTML = '<h4>Участники:</h4>';
-                    data.forEach(member => {
-                        membersDiv.innerHTML += `
-                            <div class="member-item">
-                                <span class="member-name">${member.username}</span>
-                                <span class="member-grade">${member.grade || 'Класс не указан'}</span>
-                            </div>
-                        `;
-                    });
+                    if (data.length === 0) {
+                        membersDiv.innerHTML = '<h4>Участники:</h4><p>Пока нет участников</p>';
+                    } else {
+                        membersDiv.innerHTML = '<h4>Участники:</h4>';
+                        data.forEach(member => {
+                            membersDiv.innerHTML += `
+                                <div class="member-item">
+                                    <span class="member-name">${member.username}</span>
+                                    <span class="member-grade">${member.grade || 'Класс не указан'}</span>
+                                </div>
+                            `;
+                        });
+                    }
                     membersDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при загрузке участников');
                 });
         } else {
             membersDiv.style.display = 'none';
@@ -327,7 +343,8 @@
         })
             .then(response => response.json())
             .then(data => {
-                location.reload();
+                document.getElementById(`code-${groupId}`).textContent = data.invite_code;
+                alert('Новый код сгенерирован!');
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -345,6 +362,7 @@
         })
             .then(response => response.json())
             .then(data => {
+                alert('Код деактивирован');
                 location.reload();
             })
             .catch(error => {

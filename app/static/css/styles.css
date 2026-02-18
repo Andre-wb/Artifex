@@ -499,6 +499,7 @@ header {
 nav {
     display: flex;
     justify-content: center;
+    width: 100%;
     align-items: center;
     gap: var(--spacing-xs);
     flex-wrap: wrap;

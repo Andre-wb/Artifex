@@ -4,6 +4,15 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/stats.css') }}">
+<style>
+  /* Стили для ролей */
+  .teacher-only {
+    display: {% if user and user.is_teacher %}block{% else %}none{% endif %};
+  }
+  .student-only {
+    display: {% if user and not user.is_teacher %}block{% else %}none{% endif %};
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -28,7 +37,8 @@
       <input type="date" id="dateTo" onchange="applyFilters()">
     </div>
 
-    <button class="btn-add-grade" onclick="showAddGradeModal()">
+    <!-- Кнопка добавления оценки - только для учителей -->
+    <button class="btn-add-grade teacher-only" onclick="showAddGradeModal()">
       + Добавить оценку
     </button>
   </div>
@@ -47,7 +57,8 @@
         <th>Вес</th>
         <th>Описание</th>
         <th>Урок</th>
-        <th>Действия</th>
+        <!-- Колонка действий - только для учителей -->
+        <th class="teacher-only">Действия</th>
       </tr>
       </thead>
       <tbody></tbody>
@@ -55,7 +66,8 @@
   </div>
 </div>
 
-<div id="gradeModal" class="modal">
+<!-- Модальное окно для добавления оценки - только для учителей -->
+<div id="gradeModal" class="modal teacher-only" style="display: none;">
   <div class="modal-content">
     <h2 id="gradeModalTitle">Добавить оценку</h2>
     <form id="gradeForm">
@@ -99,6 +111,13 @@
       <div class="form-group">
         <label for="gradeDescription">Описание</label>
         <input type="text" id="gradeDescription" name="description" placeholder="Контрольная работа, Ответ у доски...">
+      </div>
+
+      <div class="form-group">
+        <label for="gradeStudent">Ученик</label>
+        <select id="gradeStudent" name="user_id">
+          <option value="">Выберите ученика</option>
+        </select>
       </div>
 
       <div class="modal-buttons">

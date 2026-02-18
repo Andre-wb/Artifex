@@ -411,14 +411,23 @@ async def create_grade(
     Создаёт оценку для ученика (учитель может ставить оценку только своим ученикам).
     Привязывается к конкретному уроку.
     """
+    # Проверяем, указан ли lesson_id
+    if not grade.lesson_id:
+        raise HTTPException(status_code=400, detail="Необходимо указать урок")
+
     lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
 
     student = db.query(User).filter(User.id == lesson.user_id).first()
-    if not student or student.teacher_id != current_user.id:
+    if not student:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    # Проверяем, что учитель имеет право ставить оценку этому ученику
+    if student.teacher_id != current_user.id:
         raise HTTPException(status_code=403, detail="Этот ученик не ваш")
 
+    # Создаем оценку
     db_grade = Grade(
         user_id=lesson.user_id,
         subject_id=lesson.subject_id,
@@ -431,8 +440,12 @@ async def create_grade(
     db.add(db_grade)
     db.commit()
     db.refresh(db_grade)
-    return db_grade
 
+    # Загружаем связанные данные для ответа
+    db_grade.subject = lesson.subject
+    db_grade.lesson = lesson
+
+    return db_grade
 
 @router.put("/api/grades/{grade_id}", response_model=GradeResponse)
 async def update_grade(
