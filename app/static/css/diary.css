@@ -256,3 +256,20 @@ input[type="time"]::-webkit-calendar-picker-indicator {
         justify-content: center;
     }
 }
+.add-lesson-btn {
+    width: 100%;
+    background: var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+    color: var(--text-white, white);
+    padding: 18px 30px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: var(--font-weight-semibold, 600);
+    margin-bottom: var(--spacing-xxxl, 40px);
+    letter-spacing: -0.01em;
+    box-shadow: var(--shadow-nav-arrow, 0 4px 12px rgba(102, 126, 234, 0.2));
+    transition: all var(--transition-default, 0.3s);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+}
