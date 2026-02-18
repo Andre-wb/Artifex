@@ -117,7 +117,7 @@ SMTP_PASSWORD=your-app-password
 ## 📁 Структура проекта
 
 ```
-artifex/
+Artifex/
 ├── app/
     ├── static/                   # Статические файлы (CSS, JS, assets)
 │       ├── css/
