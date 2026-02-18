@@ -50,7 +50,7 @@ Artifex – это современное веб-приложение для ш�
 
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/yourusername/artifex.git
+git clone https://github.com/Andre-wb//Artifex
 cd artifex
 ```
 
