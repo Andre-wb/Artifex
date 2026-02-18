@@ -1,3 +1,15 @@
+"""
+Модуль маршрутов аутентификации и регистрации.
+Содержит эндпоинты для:
+- страниц входа/регистрации (HTML)
+- обработки форм регистрации и входа
+- подтверждения email
+- двухфакторной аутентификации (2FA) через email
+- выхода из системы
+- обновления токенов (refresh)
+Все защищённые эндпоинты используют CSRF-защиту, rate limiting и тайминг-безопасные сравнения.
+"""
+
 import re
 import logging
 import os
@@ -40,6 +52,10 @@ is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONME
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
+    """
+    Отображает страницу регистрации.
+    Генерирует двойной CSRF-токен и устанавливает его в cookie.
+    """
     cookie_token, form_token = generate_double_csrf_token()
     request.state.csrf_token = cookie_token
     response = templates.TemplateResponse(
@@ -61,6 +77,11 @@ async def register_page(request: Request):
 @rate_limit_safe(max_calls=5, window=60)
 @validate_input_safe
 async def register_user(request: Request, db: Session = Depends(get_db)):
+    """
+    Обрабатывает POST-запрос регистрации нового пользователя.
+    Проверяет все поля, валидирует пароль, уникальность email/телефона/имени,
+    создаёт запись в БД и отправляет письмо с подтверждением email.
+    """
     try:
         form_data = await safe_form_data(request)
         data = extract_form_data(form_data, ["username", "email", "phone", "password", "confirm", "school", "grade", "is_teacher"])
@@ -73,6 +94,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
         grade = data.get("grade")
         is_teacher = data.get("is_teacher") == "true"
 
+        # Проверка заполненности всех полей
         if not all([username, email, phone, password, confirm, school, grade]):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -86,6 +108,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка совпадения паролей
         if password != confirm:
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -99,6 +122,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Валидация сложности пароля
         is_valid_password, password_error = validate_password(password)
         if not is_valid_password:
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -113,6 +137,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка, что пароль не содержит личных данных
         is_valid_user_data, user_data_error = check_password_against_user_data(
             password=password,
             username=username,
@@ -131,8 +156,10 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Нормализация номера телефона (только цифры)
         normalized_phone = re.sub(r'\D', '', phone)
 
+        # Проверка формата email
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_pattern, email):
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -147,6 +174,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка формата имени пользователя
         username_pattern = r'^[a-zA-Z0-9_]{3,30}$'
         if not re.match(username_pattern, username):
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -161,6 +189,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка формата телефона (международный, без кода страны)
         if not re.match(r'^[1-9]\d{9,14}$', normalized_phone):
             new_cookie_token, new_form_token = generate_double_csrf_token()
             response = templates.TemplateResponse("register.html", {
@@ -174,6 +203,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка уникальности email, username, phone
         email_exists = db.query(User).filter(User.email == email).first() is not None
         username_exists = db.query(User).filter(User.username == username).first() is not None
         phone_exists = db.query(User).filter(User.phone == normalized_phone).first() is not None
@@ -217,6 +247,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Создание пользователя
         try:
             user = User(
                 username=username,
@@ -239,6 +270,7 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
 
             logger.info(f"Новый пользователь зарегистрирован: ID={user.id}, username={username}")
 
+            # Отправка письма подтверждения
             token = generate_confirmation_token(user.email)
             email_sent = await send_confirmation_email(user.email, token, request)
 
@@ -329,6 +361,10 @@ async def register_user(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/api/refresh-token")
 async def refresh_token(request: Request, db: Session = Depends(get_db)):
+    """
+    Эндпоинт для обновления access-токена с использованием refresh-токена из cookie.
+    При успешной проверке создаёт новую пару токенов и устанавливает их в cookie.
+    """
     refresh_token_cookie = request.cookies.get("refresh_token")
     if not refresh_token_cookie:
         raise HTTPException(status_code=401, detail="No refresh token")
@@ -368,6 +404,10 @@ async def refresh_token(request: Request, db: Session = Depends(get_db)):
 @rate_limit_safe(max_calls=5, window=60)
 @validate_input_safe
 async def confirm_email(token: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Подтверждает email пользователя по токену, присланному на почту.
+    Если токен валиден, устанавливает флаг confirmed=True.
+    """
     email = confirm_token(token)
     if not email:
         return templates.TemplateResponse("error.html", {
@@ -401,6 +441,10 @@ async def confirm_email(token: str, request: Request, db: Session = Depends(get_
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
+    """
+    Отображает страницу входа.
+    Генерирует двойной CSRF-токен и устанавливает его в cookie.
+    """
     cookie_token, form_token = generate_double_csrf_token()
 
     request.state.csrf_token = cookie_token
@@ -423,6 +467,14 @@ async def login_page(request: Request):
 @rate_limit_safe(max_calls=5, window=60)
 @validate_input_safe
 async def login(request: Request, db: Session = Depends(get_db)):
+    """
+    Обрабатывает форму входа.
+    Принимает credential (email/телефон/имя пользователя) и пароль.
+    Проверяет блокировку аккаунта, подтверждение email.
+    При успехе:
+        - если есть доверенная 2FA-кука, сразу выдаёт токены
+        - иначе отправляет код 2FA на email и перенаправляет на страницу ввода кода
+    """
     try:
         form_data = await safe_form_data(request)
 
@@ -446,6 +498,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Поиск пользователя по email, телефону или имени
         user = db.query(User).filter(
             or_(
                 User.email == bindparam('cred'),
@@ -454,6 +507,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
             )
         ).params(cred=credential).first()
 
+        # Проверка блокировки
         if user and user.locked_until and user.locked_until > datetime.utcnow():
             _ = user.check_password(password)
             logger.warning(f"Попытка входа в заблокированный аккаунт: {credential}")
@@ -468,6 +522,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка пароля
         if not user or not user.check_password(password):
             if user:
                 user.failed_login_attempts += 1
@@ -484,11 +539,13 @@ async def login(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Сброс счётчика неудачных попыток
         if user.failed_login_attempts > 0:
             user.failed_login_attempts = 0
             user.locked_until = None
             db.commit()
 
+        # Проверка подтверждения email
         if not user.confirmed:
             logger.warning(f"Попытка входа без подтверждения email: {credential}")
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -501,6 +558,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+        # Проверка доверенной куки для 2FA
         trusted_token = request.cookies.get("trusted_2fa")
         if trusted_token:
             trusted_user_id = verify_trusted_cookie(trusted_token)
@@ -536,6 +594,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Успешный вход (доверенное устройство): {user.username} (ID: {user.id})")
                 return response
 
+        # Генерация кода 2FA
         code = generate_2fa_code()
         code_hash = hash_2fa_code(code)
         expires_at = datetime.utcnow() + timedelta(minutes=5)
@@ -548,6 +607,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
         ))
         db.commit()
 
+        # Отправка кода по email
         if not await send_2fa_email(user, code):
             logger.error(f"Failed to send 2FA email to {user.email}")
             new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -596,6 +656,9 @@ async def login(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/logout")
 async def logout(request: Request, db: Session = Depends(get_db)):
+    """
+    Выход пользователя: отзывает все refresh-токены пользователя и удаляет куки.
+    """
     try:
         access_token = request.cookies.get("access_token")
         if access_token:
@@ -625,6 +688,11 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 @rate_limit_safe(max_calls=5, window=60)
 @validate_input_safe
 async def verify_2fa(request: Request, code: str = Form(...), db: Session = Depends(get_db)):
+    """
+    Проверяет код двухфакторной аутентификации, введённый пользователем.
+    При успехе создаёт токены доступа и устанавливает их в cookie.
+    Также устанавливает куку доверенного устройства (trusted_2fa).
+    """
     twofa_token = request.cookies.get("2fa_token")
     if not twofa_token:
         return templates.TemplateResponse("login.html", {
@@ -702,6 +770,10 @@ async def verify_2fa(request: Request, code: str = Form(...), db: Session = Depe
 
 @router.post("/resend-2fa")
 async def resend_2fa(request: Request, db: Session = Depends(get_db)):
+    """
+    Повторная отправка кода двухфакторной аутентификации на email пользователя.
+    Генерирует новый код и обновляет запись в БД.
+    """
     twofa_token = request.cookies.get("2fa_token")
     if not twofa_token:
         return JSONResponse({"success": False, "error": "Сессия не найдена"}, status_code=400)

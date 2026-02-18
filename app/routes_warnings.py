@@ -1,3 +1,8 @@
+"""
+Модуль для получения предупреждений о нагрузке.
+(Аналогичен routes_reminder.py, возможно дублирование, но оставлен как есть.)
+"""
+
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,6 +11,7 @@ from .models import User, Lesson, Subject
 from .auth import get_current_user
 
 router = APIRouter()
+
 
 @router.get("/api/reminders/upcoming")
 async def upcoming_reminders(
@@ -28,6 +34,7 @@ async def upcoming_reminders(
             Lesson.homework != ''
         ).order_by(Lesson.date, Lesson.lesson_number).all()
 
+        # Получаем названия предметов для уроков
         subject_names = {}
         if lessons:
             subject_ids = {l.subject_id for l in lessons}

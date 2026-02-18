@@ -1,3 +1,9 @@
+"""
+Модуль маршрутов для управления профилем пользователя.
+Позволяет просматривать и редактировать личные данные (имя, школа, класс, напоминания).
+Использует CSRF-защиту.
+"""
+
 import re
 import logging
 from datetime import datetime
@@ -27,6 +33,9 @@ is_production = Config.ENVIRONMENT == 'production' if hasattr(Config, 'ENVIRONME
 
 
 def render_edit_profile_error(request, user, username, school, grade, error_msg):
+    """
+    Вспомогательная функция для рендеринга страницы редактирования профиля с ошибкой.
+    """
     new_cookie_token, new_form_token = generate_double_csrf_token()
     response = templates.TemplateResponse("edit_profile.html", {
         "request": request,
@@ -51,6 +60,9 @@ async def user_orders(
         user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Отображает страницу профиля пользователя.
+    """
     new_cookie_token, new_form_token = generate_double_csrf_token()
 
     response = templates.TemplateResponse(
@@ -67,6 +79,9 @@ async def user_orders(
 
 @router.get("/edit_profile", response_class=HTMLResponse)
 async def edit_profile_page(request: Request, user: User = Depends(get_current_user)):
+    """
+    Отображает страницу редактирования профиля.
+    """
     cookie_token, form_token = generate_double_csrf_token()
     response = templates.TemplateResponse("edit_profile.html", {
         "request": request,
@@ -95,6 +110,11 @@ async def edit_profile(
         db: Session = Depends(get_db),
         user: User = Depends(get_current_user)
 ):
+    """
+    Обрабатывает форму редактирования профиля.
+    Проверяет CSRF-токен, валидирует данные, обновляет запись в БД.
+    """
+    # Проверка CSRF-токена
     cookie_csrf_token = request.cookies.get("csrf_token")
     if cookie_csrf_token:
         csrf_valid = verify_csrf_token(csrf_token, cookie_csrf_token)
@@ -108,10 +128,12 @@ async def edit_profile(
             create_csrf_cookie(response, new_cookie_token)
             return response
 
+    # Очистка входных данных
     username = sanitize_string(username.strip(), max_length=30)
     school = sanitize_string(school.strip(), max_length=100)
     grade = sanitize_string(grade.strip(), max_length=20) if grade else None
 
+    # Валидация имени пользователя
     username_pattern = r'^[a-zA-Z0-9_]{3,30}$'
     if not re.match(username_pattern, username):
         new_cookie_token, new_form_token = generate_double_csrf_token()
@@ -126,6 +148,7 @@ async def edit_profile(
         create_csrf_cookie(response, new_cookie_token)
         return response
 
+    # Проверка уникальности имени пользователя
     existing_user = db.query(User).filter(
         User.username == bindparam('username'),
         User.id != bindparam('user_id')
@@ -143,6 +166,7 @@ async def edit_profile(
         create_csrf_cookie(response, new_cookie_token)
         return response
 
+    # Проверка обязательности школы
     if not school:
         new_cookie_token, new_form_token = generate_double_csrf_token()
         response = templates.TemplateResponse("edit_profile.html", {
@@ -157,6 +181,7 @@ async def edit_profile(
         create_csrf_cookie(response, new_cookie_token)
         return response
 
+    # Для ученика класс обязателен
     if not user.is_teacher and not grade:
         new_cookie_token, new_form_token = generate_double_csrf_token()
         response = templates.TemplateResponse("edit_profile.html", {
@@ -171,12 +196,14 @@ async def edit_profile(
         create_csrf_cookie(response, new_cookie_token)
         return response
 
+    # Проверка диапазона часов напоминания
     if reminder_hours < 1 or reminder_hours > 48:
         return render_edit_profile_error(
             request, user, username, school, grade,
             "Количество часов должно быть от 1 до 48"
         )
 
+    # Обновление данных
     user.username = username
     user.school = school
     user.grade = grade if not user.is_teacher else None

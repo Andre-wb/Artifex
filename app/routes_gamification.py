@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/gamification", tags=["Геймификация"])
 
+
 def get_user_achievements_with_status(user_id: int, db: Session) -> List[AchievementWithEarnedOut]:
     """
     Возвращает список всех достижений с флагом earned для указанного пользователя.
@@ -66,6 +67,7 @@ def get_recent_achievements(user_id: int, db: Session, limit: int = 5) -> List[U
             earned_at=ua.earned_at
         ) for ua in recent
     ]
+
 
 @router.get("/profile", response_model=GamificationProfileOut)
 async def get_gamification_profile(
@@ -106,7 +108,7 @@ async def complete_lesson(
     """
     Отмечает урок как выполненный учеником.
     Требуется, чтобы урок принадлежал текущему пользователю.
-    Начисляет XP за выполнение домашнего задания.
+    Начисляет XP за выполнение домашнего задания и обновляет ударный режим.
     """
     lesson = db.query(Lesson).filter(Lesson.id == lesson_id, Lesson.user_id == current_user.id).first()
     if not lesson:

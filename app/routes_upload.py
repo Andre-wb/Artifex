@@ -1,12 +1,14 @@
+"""
+Модуль для загрузки фотографий домашнего задания.
+Включает безопасную загрузку, проверку MIME-типа, анализ на аномалии,
+OCR-распознавание текста и сохранение вложений.
+"""
+
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 import asyncio
-import os
-import shutil
-from datetime import datetime
 from pathlib import Path
 import logging
-
 
 from . import models, secure_upload, ocr
 from .auth import get_current_user
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/api/lessons", tags=["lessons"])
 
 UPLOAD_DIR = Path(Config.UPLOAD_FOLDER) / "homework_photos"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @router.post("/{lesson_id}/upload-homework-photo")
 async def upload_homework_photo(
@@ -37,25 +40,30 @@ async def upload_homework_photo(
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
 
+    # Чтение файла по частям с контролем размера
     try:
         file_bytes, size = await secure_upload.read_file_chunked(file, max_size=5*1024*1024)
     except HTTPException as e:
         raise e
 
+    # Проверка MIME-типа по содержимому
     is_valid_mime, mime_error = secure_upload.validate_file_mime_type(file_bytes, file.filename)
     if not is_valid_mime:
         raise HTTPException(status_code=400, detail=mime_error)
 
+    # Проверка содержимого изображения (размеры, энтропия и т.д.)
     is_valid_img, img_error = await secure_upload.FileAnomalyDetector.validate_image_content(file_bytes)
     if not is_valid_img:
         raise HTTPException(status_code=400, detail=img_error)
 
+    # Генерация безопасного имени файла
     ext = Path(file.filename).suffix.lower()
     safe_filename = secure_upload.generate_secure_filename(ext)
     file_path = UPLOAD_DIR / safe_filename
     with open(file_path, "wb") as f:
         f.write(file_bytes)
 
+    # Создание записи о вложении
     attachment = models.LessonAttachment(
         lesson_id=lesson.id,
         file_path=str(file_path),
@@ -65,6 +73,8 @@ async def upload_homework_photo(
     )
     db.add(attachment)
 
+    # OCR-распознавание, если запрошено
+    recognized_text = None
     if run_ocr:
         try:
             recognized_text = await asyncio.to_thread(ocr.extract_text_from_image, file_bytes)

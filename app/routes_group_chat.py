@@ -1,3 +1,8 @@
+"""
+Модуль маршрутов для группового чата внутри классов (групп).
+Позволяет получать и отправлять сообщения в группе, доступ только участникам.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -8,6 +13,7 @@ from .database import get_db
 
 router = APIRouter(prefix="/groups", tags=["group chat"])
 
+
 @router.get("/{group_id}/messages")
 async def get_group_messages(
         group_id: int,
@@ -16,6 +22,10 @@ async def get_group_messages(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
+    """
+    Возвращает последние сообщения в группе (пагинация).
+    Доступно только участникам группы.
+    """
     member = db.query(models.GroupMember).filter(
         models.GroupMember.group_id == group_id,
         models.GroupMember.user_id == current_user.id
@@ -38,6 +48,7 @@ async def get_group_messages(
         for msg in messages
     ]
 
+
 @router.post("/{group_id}/messages")
 async def send_group_message(
         group_id: int,
@@ -45,6 +56,10 @@ async def send_group_message(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
+    """
+    Отправляет сообщение в группу.
+    Доступно только участникам группы.
+    """
     member = db.query(models.GroupMember).filter(
         models.GroupMember.group_id == group_id,
         models.GroupMember.user_id == current_user.id

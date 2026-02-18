@@ -1,3 +1,9 @@
+"""
+Модуль маршрутов для трекера настроения.
+Позволяет сохранять записи о настроении, получать историю и получать
+персонализированные советы от AI на основе комментариев.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -11,13 +17,18 @@ from .ai_funcs import ask_support
 
 router = APIRouter(prefix="/api/mood", tags=["mood"])
 
+
 @router.post("/entry", response_model=schemas.MoodEntryOut)
 def create_mood_entry(
         entry: schemas.MoodEntryCreate,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Сохраняет запись о настроении пользователя."""
+    """
+    Сохраняет запись о настроении пользователя.
+    Принимает настроение (happy/neutral/sad), время дня (morning/afternoon/evening)
+    и опциональный комментарий.
+    """
     db_entry = models.MoodEntry(
         user_id=current_user.id,
         mood=entry.mood.value,
@@ -29,13 +40,16 @@ def create_mood_entry(
     db.refresh(db_entry)
     return db_entry
 
+
 @router.get("/entries", response_model=List[schemas.MoodEntryOut])
 def get_mood_entries(
         days: int = 7,
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Возвращает записи настроения за последние N дней (по умолчанию 7)."""
+    """
+    Возвращает записи настроения за последние N дней (по умолчанию 7).
+    """
     since = datetime.utcnow() - timedelta(days=days)
     entries = db.query(models.MoodEntry).filter(
         models.MoodEntry.user_id == current_user.id,
@@ -43,14 +57,16 @@ def get_mood_entries(
     ).order_by(models.MoodEntry.created_at.desc()).all()
     return entries
 
+
 @router.post("/advice", response_model=schemas.MoodAdviceResponse)
 async def get_mood_advice(
         req: schemas.MoodAdviceRequest,
         current_user: models.User = Depends(get_current_user)
 ):
     """
-    Принимает комментарий пользователя, отправляет в AI и возвращает персонализированный совет.
-    Минимальная длина комментария – 10 символов (защита от пустых запросов).
+    Принимает комментарий пользователя (о проблеме или настроении),
+    отправляет в AI и возвращает персонализированный совет.
+    Минимальная длина комментария – 10 символов.
     """
     if len(req.comment.strip()) < 10:
         raise HTTPException(

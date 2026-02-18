@@ -1,3 +1,8 @@
+"""
+Модуль для простых HTML-страниц (домашняя, расписание, рейтинг).
+Не содержит сложной логики, только рендеринг шаблонов.
+"""
+
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -12,6 +17,9 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    """
+    Главная страница.
+    """
     return templates.TemplateResponse("base.html", {"request": request})
 
 
@@ -21,6 +29,9 @@ async def timetable(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Страница с шаблоном расписания (редактирование).
+    """
     subjects = db.query(Subject).all()
     timetable_templates = db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == current_user.id
@@ -40,9 +51,15 @@ async def timetable(
 
 @router.get("/rating", response_class=HTMLResponse)
 async def rating(request: Request):
+    """
+    Страница с рейтингом (таблица лидеров).
+    """
     return templates.TemplateResponse("rating.html", {"request": request})
 
 
 @router.get("/diary-page", response_class=HTMLResponse)
 async def diary_redirect():
+    """
+    Перенаправляет с /diary-page на /diary (для обратной совместимости).
+    """
     return RedirectResponse(url="/diary")

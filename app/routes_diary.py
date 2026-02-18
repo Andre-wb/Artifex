@@ -1,3 +1,11 @@
+"""
+Модуль маршрутов для основного функционала дневника.
+Включает:
+- отображение страницы дневника (HTML)
+- API для управления предметами, уроками, оценками
+- API для статистики и шаблонов расписания
+"""
+
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -22,9 +30,12 @@ from .schemas import (
 router = APIRouter(prefix="/diary", tags=["diary"])
 templates = Jinja2Templates(directory="templates")
 
-# Функция для автоматического создания уроков из шаблона
+
 def generate_lessons_from_template(db: Session, user_id: int, start_date: date, end_date: date):
-    """Создает уроки на указанный период на основе шаблона расписания"""
+    """
+    Вспомогательная функция для автоматического создания уроков на основе шаблона расписания.
+    Создаёт уроки на каждый день в указанном диапазоне, если их ещё нет.
+    """
     templates = db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == user_id
     ).all()
@@ -40,7 +51,7 @@ def generate_lessons_from_template(db: Session, user_id: int, start_date: date, 
             Lesson.date == current_date
         ).count()
 
-        # Если уроков нет, создаем из шаблона
+        # Если уроков нет, создаём из шаблона
         if existing_lessons == 0:
             day_templates = [t for t in templates if t.day_of_week == current_date.weekday()]
             for template in day_templates:
@@ -59,13 +70,18 @@ def generate_lessons_from_template(db: Session, user_id: int, start_date: date, 
 
     db.commit()
 
-# HTML страницы
+
+# ==================== HTML страницы ====================
 @router.get("/", response_class=HTMLResponse)
 async def diary_page(
         request: Request,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Отображает основную страницу дневника с расписанием на ближайшие дни.
+    Автоматически генерирует уроки на 2 недели вперёд, если их нет.
+    """
     today = date.today()
 
     # Автоматически создаем уроки на 2 недели вперед
@@ -106,12 +122,16 @@ async def diary_page(
         }
     )
 
+
 @router.get("/stats", response_class=HTMLResponse)
 async def stats_page(
         request: Request,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Отображает страницу статистики успеваемости.
+    """
     return templates.TemplateResponse(
         "stats.html",
         {
@@ -120,13 +140,18 @@ async def stats_page(
         }
     )
 
-# API для предметов
+
+# ==================== API для предметов ====================
 @router.get("/api/subjects", response_model=List[SubjectResponse])
 async def get_subjects(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает список всех предметов.
+    """
     return db.query(Subject).all()
+
 
 @router.post("/api/subjects", response_model=SubjectResponse)
 async def create_subject(
@@ -134,11 +159,15 @@ async def create_subject(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Создаёт новый предмет. Доступно всем аутентифицированным пользователям.
+    """
     db_subject = Subject(**subject.dict())
     db.add(db_subject)
     db.commit()
     db.refresh(db_subject)
     return db_subject
+
 
 @router.put("/api/subjects/{subject_id}", response_model=SubjectResponse)
 async def update_subject(
@@ -147,6 +176,9 @@ async def update_subject(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Обновляет существующий предмет.
+    """
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -158,12 +190,16 @@ async def update_subject(
     db.refresh(subject)
     return subject
 
+
 @router.delete("/api/subjects/{subject_id}")
 async def delete_subject(
         subject_id: int,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Удаляет предмет, только если к нему не привязаны уроки.
+    """
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -176,7 +212,8 @@ async def delete_subject(
     db.commit()
     return {"ok": True}
 
-# API для уроков
+
+# ==================== API для уроков ====================
 @router.get("/api/lessons", response_model=List[LessonResponse])
 async def get_lessons(
         date_from: Optional[date] = None,
@@ -184,6 +221,10 @@ async def get_lessons(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает список уроков текущего пользователя.
+    Можно фильтровать по диапазону дат.
+    """
     query = db.query(Lesson).filter(Lesson.user_id == current_user.id)
 
     if date_from:
@@ -199,12 +240,16 @@ async def get_lessons(
 
     return lessons
 
+
 @router.get("/api/lessons/{lesson_id}", response_model=LessonResponse)
 async def get_lesson(
         lesson_id: int,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает детальную информацию об уроке по его ID.
+    """
     lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -215,18 +260,23 @@ async def get_lesson(
     lesson.grades = db.query(Grade).filter(Grade.lesson_id == lesson.id).all()
     return lesson
 
+
 @router.post("/api/lessons", response_model=LessonResponse)
 async def create_lesson(
         lesson: LessonCreate,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Создаёт новый урок для текущего пользователя.
+    """
     db_lesson = Lesson(**lesson.dict(), user_id=current_user.id)
     db.add(db_lesson)
     db.commit()
     db.refresh(db_lesson)
     db_lesson.grades = []
     return db_lesson
+
 
 @router.put("/api/lessons/{lesson_id}", response_model=LessonResponse)
 async def update_lesson(
@@ -235,6 +285,9 @@ async def update_lesson(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Обновляет существующий урок.
+    """
     db_lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -250,12 +303,16 @@ async def update_lesson(
     db_lesson.grades = db.query(Grade).filter(Grade.lesson_id == db_lesson.id).all()
     return db_lesson
 
+
 @router.delete("/api/lessons/{lesson_id}")
 async def delete_lesson(
         lesson_id: int,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Удаляет урок.
+    """
     db_lesson = db.query(Lesson).filter(
         Lesson.id == lesson_id,
         Lesson.user_id == current_user.id
@@ -267,7 +324,8 @@ async def delete_lesson(
     db.commit()
     return {"ok": True}
 
-# API для оценок
+
+# ==================== API для оценок ====================
 @router.get("/api/grades", response_model=List[GradeResponse])
 async def get_grades(
         subject_id: Optional[int] = None,
@@ -276,6 +334,10 @@ async def get_grades(
         current_user: User = Depends(get_current_teacher_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает список оценок текущего пользователя (учителя) – то есть его собственных оценок.
+    (Примечание: обычно оценки привязаны к ученикам, здесь вероятно ошибка, но оставлено как есть.)
+    """
     query = db.query(Grade).filter(Grade.user_id == current_user.id)
 
     if subject_id:
@@ -287,7 +349,9 @@ async def get_grades(
 
     return query.order_by(Grade.date.desc()).all()
 
+
 from .auth import get_current_teacher_user
+
 
 @router.post("/api/grades", response_model=GradeResponse)
 async def create_grade(
@@ -295,6 +359,10 @@ async def create_grade(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_teacher_user)
 ):
+    """
+    Создаёт оценку для ученика (учитель может ставить оценку только своим ученикам).
+    Привязывается к конкретному уроку.
+    """
     lesson = db.query(Lesson).filter(Lesson.id == grade.lesson_id).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
@@ -325,6 +393,9 @@ async def update_grade(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_teacher_user)
 ):
+    """
+    Обновляет существующую оценку. Доступно только учителю, который является учителем ученика.
+    """
     db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
@@ -351,6 +422,9 @@ async def delete_grade(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_teacher_user)
 ):
+    """
+    Удаляет оценку. Доступно только учителю ученика.
+    """
     db_grade = db.query(Grade).filter(Grade.id == grade_id).first()
     if not db_grade:
         raise HTTPException(status_code=404, detail="Оценка не найдена")
@@ -367,12 +441,17 @@ async def delete_grade(
     db.commit()
     return {"ok": True}
 
-# API для статистики
+
+# ==================== API для статистики ====================
 @router.get("/api/stats/averages")
 async def get_averages(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает средние оценки текущего пользователя по каждому предмету
+    (средневзвешенные).
+    """
     subjects = db.query(Subject).all()
     result = []
 
@@ -399,15 +478,20 @@ async def get_averages(
 
     return result
 
-# API для шаблона расписания
+
+# ==================== API для шаблона расписания ====================
 @router.get("/api/timetable-template", response_model=List[TimetableTemplateResponse])
 async def get_timetable_template(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Возвращает шаблон расписания для текущего пользователя.
+    """
     return db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == current_user.id
     ).order_by(TimetableTemplate.day_of_week, TimetableTemplate.lesson_number).all()
+
 
 @router.post("/api/timetable-template", response_model=TimetableTemplateResponse)
 async def create_timetable_template(
@@ -415,6 +499,10 @@ async def create_timetable_template(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Создаёт или обновляет запись в шаблоне расписания.
+    Если для указанного дня недели и номера урока уже есть запись, она обновляется.
+    """
     # Проверяем, нет ли уже такого урока в шаблоне
     existing = db.query(TimetableTemplate).filter(
         TimetableTemplate.user_id == current_user.id,
@@ -437,12 +525,16 @@ async def create_timetable_template(
         db.refresh(db_template)
         return db_template
 
+
 @router.delete("/api/timetable-template/{template_id}")
 async def delete_timetable_template(
         template_id: int,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Удаляет запись из шаблона расписания.
+    """
     db_template = db.query(TimetableTemplate).filter(
         TimetableTemplate.id == template_id,
         TimetableTemplate.user_id == current_user.id
@@ -454,13 +546,17 @@ async def delete_timetable_template(
     db.commit()
     return {"ok": True}
 
-# Функция для ручного запуска генерации расписания
+
+# ==================== Ручной запуск генерации расписания ====================
 @router.post("/api/generate-lessons")
 async def generate_lessons(
         weeks_ahead: int = 2,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """
+    Ручной запуск генерации уроков из шаблона на указанное количество недель вперёд.
+    """
     today = date.today()
     end_date = today + timedelta(days=weeks_ahead * 7)
     generate_lessons_from_template(db, current_user.id, today, end_date)

@@ -1,3 +1,9 @@
+"""
+Модуль маршрутов для личных сообщений (чат).
+Позволяет отправлять сообщения, получать диалог, отмечать прочитанные,
+получать список контактов и количество непрочитанных.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
@@ -16,7 +22,11 @@ async def send_message(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Отправка личного сообщения"""
+    """
+    Отправляет личное сообщение другому пользователю.
+    Проверяет, что получатель существует и что отправитель имеет право писать ему
+    (ученик может писать только своему учителю, учитель – только своим ученикам).
+    """
     if req.receiver_id == current_user.id:
         raise HTTPException(status_code=400, detail="Нельзя отправить сообщение самому себе")
 
@@ -24,10 +34,12 @@ async def send_message(
     if not receiver:
         raise HTTPException(status_code=404, detail="Получатель не найден")
 
+    # Проверка прав: ученик может писать только своему учителю
     if not current_user.is_teacher:
         if current_user.teacher_id != req.receiver_id:
             raise HTTPException(status_code=403, detail="Вы можете писать только своему учителю")
 
+    # Учитель может писать только своим ученикам
     if current_user.is_teacher:
         if not receiver.is_teacher and receiver.teacher_id != current_user.id:
             raise HTTPException(status_code=403, detail="Вы можете писать только своим ученикам")
@@ -52,11 +64,16 @@ async def get_dialog(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Получить переписку с указанным пользователем"""
+    """
+    Возвращает историю переписки с указанным пользователем (пагинация).
+    Автоматически помечает входящие сообщения как прочитанные.
+    Проверяет права доступа к диалогу.
+    """
     other = db.query(models.User).filter(models.User.id == user_id).first()
     if not other:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
+    # Проверка прав
     if not current_user.is_teacher and current_user.teacher_id != user_id:
         raise HTTPException(status_code=403, detail="Вы можете читать только диалог со своим учителем")
 
@@ -70,6 +87,7 @@ async def get_dialog(
         )
     ).order_by(desc(models.Message.created_at)).offset(offset).limit(limit).all()
 
+    # Отметка прочитанных
     for msg in messages:
         if msg.receiver_id == current_user.id and not msg.is_read:
             msg.is_read = True
@@ -93,7 +111,9 @@ async def unread_count(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Количество непрочитанных сообщений"""
+    """
+    Возвращает количество непрочитанных сообщений для текущего пользователя.
+    """
     count = db.query(models.Message).filter(
         models.Message.receiver_id == current_user.id,
         models.Message.is_read == False
@@ -106,7 +126,11 @@ async def get_contacts(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(get_current_user)
 ):
-    """Список контактов (пользователи, с которыми была переписка)"""
+    """
+    Возвращает список контактов (пользователей, с которыми была переписка)
+    с информацией о последнем сообщении и количестве непрочитанных.
+    """
+    # Подзапрос для получения всех участников переписки
     subq = db.query(models.Message.sender_id.label('user_id')).filter(
         models.Message.receiver_id == current_user.id
     ).union(

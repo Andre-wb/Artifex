@@ -1,3 +1,8 @@
+"""
+Модуль маршрутов для взаимодействия с AI-помощником (Groq API).
+Предоставляет эндпоинты для помощи с домашним заданием и общих запросов.
+"""
+
 import logging
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -20,6 +25,11 @@ async def help_with_homework(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Эндпоинт для получения объяснения домашнего задания из конкретного урока.
+    Принимает идентификатор урока, извлекает текст домашнего задания и отправляет его в AI.
+    Возвращает объяснение.
+    """
     lesson = db.query(Lesson).filter(
         Lesson.id == help_req.lesson_id,
         Lesson.user_id == current_user.id
@@ -55,6 +65,12 @@ async def ask_ai(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    """
+    Универсальный эндпоинт для обращения к AI.
+    Можно передать либо lesson_id (тогда используется текст ДЗ из урока),
+    либо произвольный текст в поле text.
+    Возвращает ответ модели.
+    """
     prompt = None
     if ai_req.lesson_id:
         lesson = db.query(Lesson).filter(
