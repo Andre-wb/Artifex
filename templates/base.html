@@ -5,6 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+    <style>
+        /* Дополнительные стили для AI-помощника */
+        .ai-chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+        .ai-chat-button:hover {
+            transform: scale(1.1);
+        }
+        .ai-chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .ai-chat-window.active {
+            display: flex;
+        }
+        .ai-chat-header {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .ai-chat-input {
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+        }
+        .ai-chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .ai-chat-input button {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .user-message {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+        .ai-message {
+            background: #f0f0f0;
+            color: #333;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -12,23 +102,41 @@
     <nav>
         <div class="desktop-nav">
             <a href="/diary" class="{% if request.url.path == '/diary' %}active{% endif %}">
-                Дневник
+                📔 Дневник
             </a>
             <a href="/timetable" class="{% if request.url.path == '/timetable' %}active{% endif %}">
-                Расписание
+                📅 Расписание
+            </a>
+            {% if user and user.is_teacher %}
+            <a href="/teacher/groups" class="{% if request.url.path == '/teacher/groups' %}active{% endif %}">
+                👥 Мои классы
+            </a>
+            <a href="/teacher/students" class="{% if request.url.path == '/teacher/students' %}active{% endif %}">
+                👨‍🎓 Ученики
+            </a>
+            {% else %}
+            <a href="/my-groups" class="{% if request.url.path == '/my-groups' %}active{% endif %}">
+                🏫 Мои классы
+            </a>
+            {% endif %}
+            <a href="/stats" class="{% if request.url.path == '/stats' %}active{% endif %}">
+                📊 Статистика
+            </a>
+            <a href="/rating" class="{% if request.url.path == '/rating' %}active{% endif %}">
+                🏆 Рейтинг
             </a>
             <a href="/profile" class="{% if request.url.path == '/profile' %}active{% endif %}">
-                Профиль
+                👤 Профиль
             </a>
         </div>
 
         <div class="nav-right">
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
-                <span class="theme-icon"><img src="{{ url_for('static', path='assets/bx-moon.svg') }}" class="invert"></span>
+                <span class="theme-icon">🌙</span>
             </button>
 
             <div class="user-avatar" onclick="window.location.href='/profile'">
-                <span><img src="{{ url_for('static', path='assets/bx-user.svg') }}" class="invert"></span>
+                <span>{{ user.username[0]|upper if user else '?' }}</span>
             </div>
 
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Меню">
@@ -39,6 +147,27 @@
         </div>
     </nav>
 </header>
+
+<!-- AI Assistant Button -->
+<button class="ai-chat-button" onclick="toggleAIChat()">🤖</button>
+
+<!-- AI Chat Window -->
+<div class="ai-chat-window" id="aiChatWindow">
+    <div class="ai-chat-header">
+        <span>🤖 AI Помощник</span>
+        <button onclick="toggleAIChat()" style="background: none; border: none; color: white; cursor: pointer;">✕</button>
+    </div>
+    <div class="ai-chat-messages" id="aiMessages">
+        <div class="message ai-message">
+            Привет! Я могу помочь с домашним заданием. Спроси меня о чём угодно!
+        </div>
+    </div>
+    <div class="ai-chat-input">
+        <input type="text" id="aiQuestion" placeholder="Задай вопрос...">
+        <button onclick="askAI()">Отправить</button>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         function getCookie(name) {
@@ -65,14 +194,59 @@
             form.appendChild(input);
         });
     });
+
+    function toggleAIChat() {
+        const chat = document.getElementById('aiChatWindow');
+        chat.classList.toggle('active');
+    }
+
+    function askAI() {
+        const input = document.getElementById('aiQuestion');
+        const question = input.value.trim();
+        if (!question) return;
+
+        const messages = document.getElementById('aiMessages');
+
+        // Add user message
+        messages.innerHTML += `<div class="message user-message">${question}</div>`;
+        input.value = '';
+
+        // Show loading
+        messages.innerHTML += `<div class="message ai-message" id="aiLoading">Думаю...</div>`;
+        messages.scrollTop = messages.scrollHeight;
+
+        // Send to API
+        fetch('/api/ask-ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: question })
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('aiLoading').remove();
+                if (data.success) {
+                    messages.innerHTML += `<div class="message ai-message">${data.explanation}</div>`;
+                } else {
+                    messages.innerHTML += `<div class="message ai-message">Извините, произошла ошибка. Попробуйте позже.</div>`;
+                }
+                messages.scrollTop = messages.scrollHeight;
+            })
+            .catch(error => {
+                document.getElementById('aiLoading').remove();
+                messages.innerHTML += `<div class="message ai-message">Ошибка соединения. Попробуйте позже.</div>`;
+                messages.scrollTop = messages.scrollHeight;
+            });
+    }
 </script>
+
 <main>
     {% block content %}
     {% endblock %}
 </main>
 
 <script src="{{ url_for('static', path='js/theme_toggle.js') }}"></script>
-
 {% block scripts %}{% endblock %}
 </body>
 </html>

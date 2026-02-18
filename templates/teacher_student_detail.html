@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .student-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .student-header {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 30px;
+  }
+
+  .student-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    font-weight: 600;
+  }
+
+  .student-info h1 {
+    margin: 0 0 10px;
+    color: #333;
+  }
+
+  .student-info p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 16px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .stat-card h3 {
+    margin: 0 0 10px;
+    color: #999;
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+
+  .stat-card .value {
+    font-size: 36px;
+    font-weight: 600;
+    color: #667eea;
+  }
+
+  .grades-section {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+  }
+
+  .grades-section h2 {
+    margin: 0 0 20px;
+    color: #333;
+  }
+
+  .grades-filter {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+
+  .grades-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .grades-table th {
+    text-align: left;
+    padding: 12px;
+    background: #f9f9f9;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .grades-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .grades-table tr:hover {
+    background: #f5f5f5;
+  }
+
+  .grade-badge {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    text-align: center;
+    line-height: 40px;
+    font-weight: 600;
+  }
+
+  .grade-badge.grade-5 { background: #4caf50; }
+  .grade-badge.grade-4 { background: #2196f3; }
+  .grade-badge.grade-3 { background: #ff9800; }
+  .grade-badge.grade-2 { background: #f44336; }
+
+  .progress-chart {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
+  .chart-bar {
+    margin-bottom: 15px;
+  }
+
+  .chart-bar-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+
+  .chart-bar-progress {
+    height: 30px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .chart-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-size: 12px;
+  }
+
+  .btn-add-grade {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .btn-add-grade:hover {
+    background: #5a6fd8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-detail-container">
+  <!-- Шапка профиля ученика -->
+  <div class="student-header">
+    <div class="student-avatar-large">{{ student.username[0]|upper }}</div>
+    <div class="student-info">
+      <h1>{{ student.username }}</h1>
+      <p>📧 {{ student.email }}</p>
+      <p>🏫 {{ student.school }}</p>
+      <p>📚 {{ student.grade or 'Класс не указан' }}</p>
+    </div>
+  </div>
+
+  <!-- Основная статистика -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <h3>Всего оценок</h3>
+      <div class="value" id="totalGrades">...</div>
+    </div>
+    <div class="stat-card">
+      <h3>Средний балл</h3>
+      <div class="value" id="avgGrade">...</div>
+    </div>
+    <div class="stat-card">
+      <h3>Отличных оценок</h3>
+      <div class="value" id="excellentGrades">...</div>
+    </div>
+    <div class="stat-card">
+      <h3>Выполнено ДЗ</h3>
+      <div class="value" id="completedHomework">...</div>
+    </div>
+  </div>
+
+  <!-- Кнопка добавления оценки -->
+  <button class="btn-add-grade" onclick="showAddGradeModal()">
+    + Добавить оценку
+  </button>
+
+  <!-- Таблица оценок -->
+  <div class="grades-section">
+    <h2>📊 Все оценки</h2>
+
+    <div class="grades-filter">
+      <select class="filter-select" id="subjectFilter" onchange="filterGrades()">
+        <option value="">Все предметы</option>
+      </select>
+
+      <input type="date" class="filter-select" id="dateFrom" onchange="filterGrades()">
+
+      <input type="date" class="filter-select" id="dateTo" onchange="filterGrades()">
+    </div>
+
+    <table class="grades-table" id="gradesTable">
+      <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Предмет</th>
+        <th>Оценка</th>
+        <th>Вес</th>
+        <th>Описание</th>
+        <th>Действия</th>
+      </tr>
+      </thead>
+      <tbody id="gradesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- График прогресса по предметам -->
+  <div class="progress-chart">
+    <h2>📈 Прогресс по предметам</h2>
+    <div id="subjectProgress"></div>
+  </div>
+</div>
+
+<!-- Модальное окно для добавления оценки -->
+<div id="gradeModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h2>Добавить оценку</h2>
+    <form id="gradeForm">
+      <input type="hidden" id="gradeId">
+      <input type="hidden" name="student_id" value="{{ student.id }}">
+
+      <div class="form-group">
+        <label>Предмет *</label>
+        <select id="gradeSubject" name="subject_id" required>
+          <option value="">Выберите предмет</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Урок *</label>
+        <select id="gradeLesson" name="lesson_id" required>
+          <option value="">Выберите урок</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Оценка *</label>
+        <select id="gradeValue" name="value" required>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Вес</label>
+        <select id="gradeWeight" name="weight">
+          <option value="1.0">Обычная (1.0)</option>
+          <option value="1.5">Контрольная (1.5)</option>
+          <option value="2.0">Экзамен (2.0)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Дата *</label>
+        <input type="date" id="gradeDate" name="date" required>
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <input type="text" id="gradeDescription" name="description" placeholder="Контрольная работа, Ответ у доски...">
+      </div>
+
+      <div class="modal-buttons">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeGradeModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let allGrades = [];
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadGrades();
+    loadSubjects();
+    loadLessons();
+    loadStats();
+  });
+
+  function loadGrades() {
+    fetch(`/teacher/student/{{ student.id }}/grades`)
+            .then(response => response.json())
+            .then(data => {
+              allGrades = data;
+              displayGrades(data);
+
+              // Заполняем фильтр предметов
+              const subjects = [...new Set(data.map(g => g.subject))];
+              const subjectFilter = document.getElementById('subjectFilter');
+              subjects.forEach(subject => {
+                subjectFilter.innerHTML += `<option value="${subject}">${subject}</option>`;
+              });
+            });
+  }
+
+  function displayGrades(grades) {
+    const tbody = document.getElementById('gradesBody');
+    tbody.innerHTML = '';
+
+    grades.forEach(grade => {
+      const gradeClass = `grade-badge grade-${grade.value}`;
+      tbody.innerHTML += `
+                <tr>
+                    <td>${grade.date}</td>
+                    <td>${grade.subject}</td>
+                    <td><span class="${gradeClass}">${grade.value}</span></td>
+                    <td>${grade.weight}</td>
+                    <td>${grade.description || '-'}</td>
+                    <td>
+                        <button onclick="editGrade(${grade.id})" style="margin-right:5px;">✏️</button>
+                        <button onclick="deleteGrade(${grade.id})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+    });
+  }
+
+  function filterGrades() {
+    const subject = document.getElementById('subjectFilter').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+
+    let filtered = allGrades;
+
+    if (subject) {
+      filtered = filtered.filter(g => g.subject === subject);
+    }
+    if (dateFrom) {
+      filtered = filtered.filter(g => g.date >= dateFrom);
+    }
+    if (dateTo) {
+      filtered = filtered.filter(g => g.date <= dateTo);
+    }
+
+    displayGrades(filtered);
+  }
+
+  function loadStats() {
+    fetch(`/teacher/student/{{ student.id }}/grades`)
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('totalGrades').textContent = data.length;
+
+              if (data.length > 0) {
+                const sum = data.reduce((acc, g) => acc + g.value, 0);
+                const avg = (sum / data.length).toFixed(2);
+                document.getElementById('avgGrade').textContent = avg;
+
+                const excellent = data.filter(g => g.value >= 4).length;
+                document.getElementById('excellentGrades').textContent = excellent;
+              } else {
+                document.getElementById('avgGrade').textContent = '—';
+                document.getElementById('excellentGrades').textContent = '0';
+              }
+            });
+
+    fetch(`/api/stats/averages?user_id={{ student.id }}`)
+            .then(response => response.json())
+            .then(data => {
+              const progressDiv = document.getElementById('subjectProgress');
+              progressDiv.innerHTML = '';
+
+              data.forEach(item => {
+                const percentage = (item.average / 5 * 100).toFixed(0);
+                progressDiv.innerHTML += `
+                        <div class="chart-bar">
+                            <div class="chart-bar-label">
+                                <span>${item.subject_name}</span>
+                                <span>${item.average.toFixed(2)}</span>
+                            </div>
+                            <div class="chart-bar-progress">
+                                <div class="chart-bar-fill" style="width: ${percentage}%">
+                                    ${item.grades_count} оценок
+                                </div>
+                            </div>
+                        </div>
+                    `;
+              });
+            });
+  }
+
+  function loadSubjects() {
+    fetch('/diary/api/subjects')
+            .then(response => response.json())
+            .then(data => {
+              const select = document.getElementById('gradeSubject');
+              data.forEach(subject => {
+                select.innerHTML += `<option value="${subject.id}">${subject.name}</option>`;
+              });
+            });
+  }
+
+  function loadLessons() {
+    fetch(`/diary/api/lessons?user_id={{ student.id }}`)
+            .then(response => response.json())
+            .then(data => {
+              const select = document.getElementById('gradeLesson');
+              data.forEach(lesson => {
+                select.innerHTML += `
+                        <option value="${lesson.id}">
+                            ${lesson.date} - ${lesson.subject.name} (урок ${lesson.lesson_number})
+                        </option>
+                    `;
+              });
+            });
+  }
+
+  function showAddGradeModal() {
+    document.getElementById('gradeModal').style.display = 'block';
+    document.getElementById('gradeForm').reset();
+  }
+
+  function closeGradeModal() {
+    document.getElementById('gradeModal').style.display = 'none';
+  }
+
+  document.getElementById('gradeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+
+    fetch('/diary/api/grades', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+            .then(response => response.json())
+            .then(data => {
+              closeGradeModal();
+              loadGrades();
+              loadStats();
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Ошибка при добавлении оценки');
+            });
+  });
+
+  function editGrade(gradeId) {
+    // Редактирование оценки
+  }
+
+  function deleteGrade(gradeId) {
+    if (!confirm('Удалить оценку?')) return;
+
+    fetch(`/diary/api/grades/${gradeId}`, {
+      method: 'DELETE'
+    })
+            .then(response => response.json())
+            .then(data => {
+              loadGrades();
+              loadStats();
+            });
+  }
+</script>
+{% endblock %}

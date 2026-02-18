@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Мои классы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .groups-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .create-group-form {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .form-group {
+        flex: 1;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    .btn-create {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: transform 0.3s;
+    }
+
+    .btn-create:hover {
+        transform: translateY(-2px);
+    }
+
+    .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .group-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+
+    .group-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+    }
+
+    .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .group-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .group-school {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .invite-code {
+        background: #f0f0f0;
+        padding: 8px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 14px;
+        margin: 10px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .copy-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .group-stats {
+        display: flex;
+        justify-content: space-between;
+        margin: 15px 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .group-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .group-actions button {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+    }
+
+    .btn-members {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-regenerate {
+        background: #f0f0f0;
+        color: #333;
+    }
+
+    .btn-deactivate {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    .group-expires {
+        font-size: 12px;
+        color: #999;
+        margin-top: 10px;
+    }
+
+    .members-list {
+        margin-top: 15px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+    }
+
+    .member-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 0;
+        font-size: 14px;
+    }
+
+    .member-name {
+        color: #333;
+    }
+
+    .member-grade {
+        color: #999;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="groups-container">
+    <h1>👥 Мои классы</h1>
+
+    <!-- Форма создания группы -->
+    <div class="create-group-form">
+        <h2>Создать новый класс</h2>
+        <form id="createGroupForm" onsubmit="createGroup(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Название класса *</label>
+                    <input type="text" name="name" required placeholder="Например: 7А">
+                </div>
+                <div class="form-group">
+                    <label>Школа *</label>
+                    <input type="text" name="school" required placeholder="Номер или название школы">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Срок действия кода (дней)</label>
+                    <input type="number" name="expires_in_days" value="30" min="1" max="365">
+                </div>
+            </div>
+            <button type="submit" class="btn-create">Создать класс</button>
+        </form>
+    </div>
+
+    <!-- Список групп -->
+    <div class="groups-grid" id="groupsGrid">
+        {% for group in groups %}
+        <div class="group-card" id="group-{{ group.id }}">
+            <div class="group-header">
+                <span class="group-name">{{ group.name }}</span>
+                <span class="group-school">{{ group.school }}</span>
+            </div>
+
+            <div class="invite-code">
+                <span>{{ group.invite_code }}</span>
+                <button class="copy-btn" onclick="copyCode('{{ group.invite_code }}')">Копировать</button>
+            </div>
+
+            <div class="group-stats">
+                <span>👥 Учеников: {{ group.members_count }}</span>
+                <span>📅 Создан: {{ group.created_at.strftime('%d.%m.%Y') if group.created_at else 'Не указано' }}</span>
+            </div>
+
+            {% if group.expires_at %}
+            <div class="group-expires">
+                ⏰ Действует до: {{ group.expires_at.strftime('%d.%m.%Y') }}
+            </div>
+            {% endif %}
+
+            <div class="group-actions">
+                <button class="btn-members" onclick="showMembers({{ group.id }})">👥 Участники</button>
+                <button class="btn-regenerate" onclick="regenerateCode({{ group.id }})">🔄 Новый код</button>
+                <button class="btn-deactivate" onclick="deactivateGroup({{ group.id }})">🚫 Деактивировать</button>
+            </div>
+
+            <div class="members-list" id="members-{{ group.id }}" style="display: none;">
+                <!-- Здесь будут участники -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function createGroup(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        fetch('/teacher/groups', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: formData.get('name'),
+                school: formData.get('school'),
+                expires_in_days: parseInt(formData.get('expires_in_days'))
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    location.reload();
+                } else {
+                    alert('Ошибка при создании группы');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при создании группы');
+            });
+    }
+
+    function copyCode(code) {
+        navigator.clipboard.writeText(code).then(() => {
+            alert('Код скопирован!');
+        });
+    }
+
+    function showMembers(groupId) {
+        const membersDiv = document.getElementById(`members-${groupId}`);
+
+        if (membersDiv.style.display === 'none') {
+            fetch(`/teacher/groups/${groupId}/members`)
+                .then(response => response.json())
+                .then(data => {
+                    membersDiv.innerHTML = '<h4>Участники:</h4>';
+                    data.forEach(member => {
+                        membersDiv.innerHTML += `
+                            <div class="member-item">
+                                <span class="member-name">${member.username}</span>
+                                <span class="member-grade">${member.grade || 'Класс не указан'}</span>
+                            </div>
+                        `;
+                    });
+                    membersDiv.style.display = 'block';
+                });
+        } else {
+            membersDiv.style.display = 'none';
+        }
+    }
+
+    function regenerateCode(groupId) {
+        if (!confirm('Сгенерировать новый код приглашения? Старый код перестанет работать.')) {
+            return;
+        }
+
+        fetch(`/teacher/groups/${groupId}/regenerate-code`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при генерации кода');
+            });
+    }
+
+    function deactivateGroup(groupId) {
+        if (!confirm('Деактивировать код приглашения? Участники останутся в группе, но новые не смогут присоединиться.')) {
+            return;
+        }
+
+        fetch(`/teacher/groups/${groupId}/deactivate`, {
+            method: 'PATCH'
+        })
+            .then(response => response.json())
+            .then(data => {
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при деактивации');
+            });
+    }
+</script>
+{% endblock %}
