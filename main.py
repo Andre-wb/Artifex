@@ -7,7 +7,6 @@
 from fastapi.exception_handlers import http_exception_handler
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from app.routes import router
 from app.waf import setup_waf, DEFAULT_WAF_CONFIG
 import logging
 from app.auth import key_manager
@@ -107,7 +106,6 @@ async def shutdown_event():
     logger.info("Планировщик задач остановлен")
 
 # Подключаем все роутеры
-app.include_router(router)
 app.include_router(diary_router)
 app.include_router(chat_router)
 app.include_router(mood_router)
