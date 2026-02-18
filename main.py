@@ -7,7 +7,6 @@
 from fastapi.exception_handlers import http_exception_handler
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from app.routes import router
 from app.waf import setup_waf, DEFAULT_WAF_CONFIG
 import logging
 from app.auth import key_manager
@@ -23,6 +22,11 @@ from app.load_analyzer import run_load_analysis_for_all_users
 from app.database import SessionLocal
 from app.routes_warnings import router as warnings_router
 from app.routes_reminder import router as reminder_router
+from app.routes_auth import router as auth_router
+from app.routes_profile import router as profile_router
+from app.routes_pages import router as pages_router
+from app.routes_diary_api import router as diary_api_router
+from app.routes_ai import router as ai_router
 
 # Создаём экземпляр FastAPI с заголовком приложения
 app = FastAPI(title="Artifex - Дневник")
@@ -102,7 +106,6 @@ async def shutdown_event():
     logger.info("Планировщик задач остановлен")
 
 # Подключаем все роутеры
-app.include_router(router)
 app.include_router(diary_router)
 app.include_router(chat_router)
 app.include_router(mood_router)
@@ -110,6 +113,11 @@ app.include_router(academic_router)
 app.include_router(warnings_router)
 app.include_router(reminder_router)
 app.include_router(gamification_router)
+app.include_router(auth_router)
+app.include_router(profile_router)
+app.include_router(pages_router)
+app.include_router(diary_api_router)
+app.include_router(ai_router)
 
 templates = Jinja2Templates(directory="templates")
 app.state.templates = templates

@@ -1,0 +1,42 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="fastapi" />
+          <option value="uvicorn" />
+          <option value="sqlalchemy" />
+          <option value="python-dotenv" />
+          <option value="Werkzeug" />
+          <option value="requests" />
+          <option value="itsdangerous" />
+          <option value="jinja2" />
+          <option value="python-multipart" />
+          <option value="pydantic" />
+          <option value="passlib" />
+          <option value="psycopg2-binary" />
+          <option value="boto3" />
+          <option value="hvac" />
+          <option value="cryptography" />
+          <option value="kubernetes" />
+          <option value="python-decouple" />
+          <option value="bcrypt" />
+          <option value="email-validator" />
+          <option value="redis" />
+          <option value="limits" />
+          <option value="MarkupSafe" />
+          <option value="libmagic" />
+          <option value="python-magic" />
+          <option value="Pillow" />
+          <option value="file-magic" />
+          <option value="PyJWT" />
+          <option value="groq" />
+          <option value="easyocr" />
+          <option value="apscheduler" />
+          <option value="certifi" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
