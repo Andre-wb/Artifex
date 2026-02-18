@@ -32,7 +32,7 @@
             <span class="lesson-teacher">{{ lesson.subject.teacher_name or '' }}</span>
           </div>
           {% if lesson.homework %}
-          <div class="lesson-homework">📚 {{ lesson.homework[:30] }}{% if lesson.homework|length > 30 %}...{% endif %}</div>
+          <div class="lesson-homework"><img src="{{ url_for('static', path='assets/bx-book-bookmark.svg') }}"> {{ lesson.homework[:30] }}{% if lesson.homework|length > 30 %}...{% endif %}</div>
           {% endif %}
         </div>
         <div class="lesson-grade
