@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from . import models, schemas
 from .auth import get_current_teacher_user
@@ -105,6 +105,97 @@ async def get_group_members(
     return result
 
 
+@router.get("/students", response_model=list[schemas.StudentOut])
+async def get_my_students(
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_teacher_user)
+):
+    """
+    Возвращает список всех учеников учителя.
+    """
+    students = db.query(models.User).filter(
+        models.User.teacher_id == current_user.id,
+        models.User.is_teacher == False
+    ).all()
+
+    result = []
+    for student in students:
+        # Получаем группы ученика
+        memberships = db.query(models.GroupMember).filter(
+            models.GroupMember.user_id == student.id
+        ).all()
+        groups = []
+        for m in memberships:
+            groups.append({
+                "id": m.group.id,
+                "name": m.group.name
+            })
+
+        # Получаем статистику
+        from .routes_academic import calculate_final_grade
+        from .models import Subject
+
+        subjects = db.query(Subject).all()
+        averages = []
+        for subject in subjects:
+            avg = calculate_final_grade(student.id, subject.id, None, db)
+            if avg:
+                averages.append({
+                    "subject_id": subject.id,
+                    "subject_name": subject.name,
+                    "average": avg
+                })
+
+        result.append({
+            "id": student.id,
+            "username": student.username,
+            "email": student.email,
+            "school": student.school,
+            "grade": student.grade,
+            "groups": groups,
+            "averages": averages
+        })
+
+    return result
+
+
+@router.get("/student/{student_id}/grades")
+async def get_student_grades(
+        student_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_teacher_user)
+):
+    """
+    Возвращает все оценки ученика.
+    """
+    student = db.query(models.User).filter(
+        models.User.id == student_id,
+        models.User.teacher_id == current_user.id,
+        models.User.is_teacher == False
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    grades = db.query(models.Grade).filter(
+        models.Grade.user_id == student_id
+    ).order_by(models.Grade.date.desc()).all()
+
+    result = []
+    for grade in grades:
+        result.append({
+            "id": grade.id,
+            "value": grade.value,
+            "weight": grade.weight,
+            "date": grade.date.isoformat(),
+            "description": grade.description,
+            "subject": grade.subject.name,
+            "lesson_id": grade.lesson_id
+        })
+
+    return result
+
+
 @router.patch("/groups/{group_id}/deactivate")
 async def deactivate_group(
         group_id: int,
@@ -198,4 +289,50 @@ async def get_pending_lessons(
                 } for att in lesson.attachments
             ]
         })
+    return result
+
+@router.get("/student/{student_id}/averages")
+async def get_student_averages(
+        student_id: int,
+        db: Session = Depends(get_db),
+        current_user: models.User = Depends(get_current_teacher_user)
+):
+    """
+    Возвращает средние оценки ученика по предметам.
+    """
+    student = db.query(models.User).filter(
+        models.User.id == student_id,
+        models.User.teacher_id == current_user.id,
+        models.User.is_teacher == False
+    ).first()
+
+    if not student:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    from .routes_diary import get_averages
+    # Вызываем функцию из diary, передавая параметры
+    subjects = db.query(models.Subject).all()
+    result = []
+
+    for subject in subjects:
+        grades = db.query(models.Grade).filter(
+            models.Grade.user_id == student_id,
+            models.Grade.subject_id == subject.id
+        ).all()
+
+        if grades:
+            total_weight = sum(g.weight for g in grades)
+            weighted_sum = sum(g.value * g.weight for g in grades)
+            average = weighted_sum / total_weight if total_weight > 0 else 0
+        else:
+            average = 0
+
+        result.append({
+            "subject_id": subject.id,
+            "subject_name": subject.name,
+            "average": round(average, 2),
+            "grades_count": len(grades),
+            "color": subject.color
+        })
+
     return result

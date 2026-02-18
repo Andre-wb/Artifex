@@ -3,7 +3,7 @@
 {% block title %}Статистика{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/stats.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -110,5 +110,5 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/stats.js') }}"></script>
+<script src="{{ url_for('static', path='js/stats.js') }}"></script>
 {% endblock %}

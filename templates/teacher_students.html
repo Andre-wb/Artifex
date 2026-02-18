@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Мои ученики{% endblock %}
+
+{% block extra_css %}
+<style>
+  .students-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .filters {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+
+  .students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+
+  .student-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+    cursor: pointer;
+  }
+
+  .student-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+  }
+
+  .student-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+
+  .student-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .student-info h3 {
+    margin: 0;
+    color: #333;
+    font-size: 16px;
+  }
+
+  .student-info p {
+    margin: 5px 0 0;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .student-groups {
+    margin: 15px 0;
+    font-size: 14px;
+  }
+
+  .group-tag {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #555;
+  }
+
+  .student-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 15px 0;
+    text-align: center;
+  }
+
+  .stat-item {
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #667eea;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #999;
+  }
+
+  .subjects-progress {
+    margin-top: 15px;
+  }
+
+  .subject-progress {
+    margin-bottom: 10px;
+  }
+
+  .subject-name {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+  }
+
+  .view-details-btn {
+    width: 100%;
+    padding: 10px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 15px;
+    transition: background 0.3s;
+  }
+
+  .view-details-btn:hover {
+    background: #5a6fd8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="students-container">
+  <h1>👨‍🎓 Мои ученики</h1>
+
+  <!-- Фильтры -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Поиск по имени</label>
+      <input type="text" id="searchInput" placeholder="Введите имя..." onkeyup="filterStudents()">
+    </div>
+    <div class="filter-group">
+      <label>Класс</label>
+      <select id="gradeFilter" onchange="filterStudents()">
+        <option value="">Все классы</option>
+        {% for student in students %}
+        {% if student.grade %}
+        <option value="{{ student.grade }}">{{ student.grade }}</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Группа</label>
+      <select id="groupFilter" onchange="filterStudents()">
+        <option value="">Все группы</option>
+        {% for student in students %}
+        <option value="{{ student.group_name }}">{{ student.group_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Список учеников -->
+  <div class="students-grid" id="studentsGrid">
+    {% for student in students %}
+    <div class="student-card" data-name="{{ student.username }}" data-grade="{{ student.grade }}" data-group="{{ student.group_name }}">
+      <div class="student-header">
+        <div class="student-avatar">{{ student.username[0]|upper }}</div>
+        <div class="student-info">
+          <h3>{{ student.username }}</h3>
+          <p>{{ student.email }}</p>
+        </div>
+      </div>
+
+      <div class="student-groups">
+        <span class="group-tag">🏫 {{ student.school }}</span>
+        <span class="group-tag">📚 {{ student.grade or 'Класс не указан' }}</span>
+        <span class="group-tag">👥 {{ student.group_name }}</span>
+      </div>
+
+      <div class="student-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="gradesCount-{{ student.id }}">...</div>
+          <div class="stat-label">Оценок</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="avgGrade-{{ student.id }}">...</div>
+          <div class="stat-label">Средний балл</div>
+        </div>
+      </div>
+
+      <div class="subjects-progress" id="subjects-{{ student.id }}">
+        <!-- Здесь будут предметы -->
+      </div>
+
+      <button class="view-details-btn" onclick="window.location.href='/teacher/student/{{ student.id }}'">
+        Подробнее
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  function filterStudents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const gradeFilter = document.getElementById('gradeFilter').value;
+    const groupFilter = document.getElementById('groupFilter').value;
+
+    const cards = document.querySelectorAll('.student-card');
+
+    cards.forEach(card => {
+      const name = card.dataset.name.toLowerCase();
+      const grade = card.dataset.grade;
+      const group = card.dataset.group;
+
+      const matchesSearch = name.includes(searchTerm);
+      const matchesGrade = !gradeFilter || grade === gradeFilter;
+      const matchesGroup = !groupFilter || group === groupFilter;
+
+      if (matchesSearch && matchesGrade && matchesGroup) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  // Загрузка данных для каждого ученика
+  document.addEventListener('DOMContentLoaded', function() {
+    {% for student in students %}
+    fetch(`/teacher/student/{{ student.id }}/grades`)
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById(`gradesCount-{{ student.id }}`).textContent = data.length;
+
+              if (data.length > 0) {
+                const sum = data.reduce((acc, grade) => acc + grade.value, 0);
+                const avg = (sum / data.length).toFixed(2);
+                document.getElementById(`avgGrade-{{ student.id }}`).textContent = avg;
+              } else {
+                document.getElementById(`avgGrade-{{ student.id }}`).textContent = '—';
+              }
+            });
+
+    fetch(`/teacher/student/{{ student.id }}/averages`)
+            .then(response => response.json())
+            .then(data => {
+              const container = document.getElementById(`subjects-{{ student.id }}`);
+              container.innerHTML = '';
+              data.slice(0, 5).forEach(item => {
+                const percentage = (item.average / 5 * 100).toFixed(0);
+                container.innerHTML += `
+                        <div class="subject-progress">
+                            <div class="subject-name">
+                                <span>${item.subject_name}</span>
+                                <span>${item.average.toFixed(2)}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+              });
+            });
+    {% endfor %}
+  });
+</script>
+{% endblock %}

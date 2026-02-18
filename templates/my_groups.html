@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Мои классы{% endblock %}
+
+{% block extra_css %}
+<style>
+  .groups-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .join-group-form {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
+  .join-group-form h2 {
+    margin: 0 0 20px;
+    color: #333;
+  }
+
+  .join-input {
+    display: flex;
+    gap: 10px;
+  }
+
+  .join-input input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+
+  .btn-join {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: transform 0.3s;
+  }
+
+  .btn-join:hover {
+    transform: translateY(-2px);
+  }
+
+  .groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .group-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+  }
+
+  .group-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+  }
+
+  .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  .group-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .group-school {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .group-info {
+    margin: 15px 0;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .info-item img {
+    width: 20px;
+    height: 20px;
+    opacity: 0.6;
+  }
+
+  .chat-btn {
+    width: 100%;
+    padding: 10px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 15px;
+    transition: background 0.3s;
+  }
+
+  .chat-btn:hover {
+    background: #5a6fd8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="groups-container">
+  <h1>🏫 Мои классы</h1>
+
+  <!-- Форма присоединения к классу -->
+  <div class="join-group-form">
+    <h2>Присоединиться к классу</h2>
+    <div class="join-input">
+      <input type="text" id="inviteCode" placeholder="Введите код приглашения">
+      <button class="btn-join" onclick="joinGroup()">Присоединиться</button>
+    </div>
+  </div>
+
+  <!-- Список групп -->
+  <div class="groups-grid">
+    {% for group in groups %}
+    <div class="group-card">
+      <div class="group-header">
+        <span class="group-name">{{ group.name }}</span>
+        <span class="group-school">{{ group.school }}</span>
+      </div>
+
+      <div class="group-info">
+        <div class="info-item">
+          <span>👥 Участников: {{ group.members_count }}</span>
+        </div>
+        <div class="info-item">
+          <span>👨‍🏫 Учитель: {{ group.teacher.username }}</span>
+        </div>
+        <div class="info-item">
+          <span>📅 Присоединился: {{ group.created_at.strftime('%d.%m.%Y') }}</span>
+        </div>
+      </div>
+
+      <button class="chat-btn" onclick="openGroupChat({{ group.id }})">
+        💬 Открыть чат класса
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  function joinGroup() {
+    const code = document.getElementById('inviteCode').value.trim();
+    if (!code) {
+      alert('Введите код приглашения');
+      return;
+    }
+
+    fetch('/user/join-group', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ invite_code: code })
+    })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert('Вы успешно присоединились к классу!');
+                location.reload();
+              } else {
+                alert(data.detail || 'Ошибка при присоединении');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Ошибка при присоединении к классу');
+            });
+  }
+
+  function openGroupChat(groupId) {
+    // Открыть чат группы
+    window.location.href = `/group-chat/${groupId}`;
+  }
+</script>
+{% endblock %}
