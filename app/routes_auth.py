@@ -21,6 +21,8 @@ from sqlalchemy import or_, bindparam
 from sqlalchemy.exc import IntegrityError
 import asyncio
 
+from torch.distributed.elastic.multiprocessing.redirects import redirect
+
 from app.config import Config
 from app.secure_cookie import create_secure_cookie
 from app.email import (
@@ -442,12 +444,20 @@ async def confirm_email(token: str, request: Request, db: Session = Depends(get_
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+async def login_page(request: Request, error: str = None):
     """
     Отображает страницу входа.
     Генерирует двойной CSRF-токен и устанавливает его в cookie.
+    При наличии параметра error показывает соответствующее сообщение.
     """
     cookie_token, form_token = generate_double_csrf_token()
+
+    error_messages = {
+        "session_expired": "Сессия истекла. Войдите снова.",
+        "invalid_session": "Недействительная сессия. Войдите снова.",
+        "too_many_attempts": "Слишком много неверных попыток. Начните вход заново.",
+    }
+    error_message = error_messages.get(error) if error else None
 
     request.state.csrf_token = cookie_token
     request.state._csrf_cookie_token = cookie_token
@@ -456,7 +466,8 @@ async def login_page(request: Request):
         "login.html",
         {
             "request": request,
-            "csrf_token": form_token
+            "csrf_token": form_token,
+            "error": error_message
         }
     )
 
@@ -694,20 +705,15 @@ async def verify_2fa(request: Request, code: str = Form(...), db: Session = Depe
     Проверяет код двухфакторной аутентификации, введённый пользователем.
     При успехе создаёт токены доступа и устанавливает их в cookie.
     Также устанавливает куку доверенного устройства (trusted_2fa).
+    При ошибках перенаправляет на страницу входа с соответствующим параметром.
     """
     twofa_token = request.cookies.get("2fa_token")
     if not twofa_token:
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "error": "Сессия истекла. Войдите снова."
-        })
+        return RedirectResponse(url="/login?error=session_expired", status_code=303)
 
     user_id = verify_2fa_token(twofa_token)
     if not user_id:
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "error": "Недействительная сессия. Войдите снова."
-        })
+        return RedirectResponse(url="/login?error=invalid_session", status_code=303)
 
     twofa_code = db.query(TwoFactorCode).filter(
         TwoFactorCode.user_id == user_id,
@@ -723,10 +729,7 @@ async def verify_2fa(request: Request, code: str = Form(...), db: Session = Depe
     if twofa_code.attempts >= 5:
         db.delete(twofa_code)
         db.commit()
-        return templates.TemplateResponse("verify_2fa.html", {
-            "request": request,
-            "error": "Слишком много неверных попыток. Начните вход заново."
-        })
+        return RedirectResponse(url="/login?error=too_many_attempts", status_code=303)
 
     if verify_2fa_code(code, twofa_code.code_hash):
         db.delete(twofa_code)
@@ -734,7 +737,7 @@ async def verify_2fa(request: Request, code: str = Form(...), db: Session = Depe
 
         user = db.query(User).get(user_id)
         if not user:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "Пользователь не найден"})
+            return RedirectResponse(url="/login?error=invalid_session", status_code=303)
 
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
@@ -1041,3 +1044,13 @@ async def reset_password(
         )
         create_csrf_cookie(response, new_cookie_token)
         return response
+
+@router.get("/api/telegram-link")
+async def get_telegram_link(current_user: User = Depends(get_current_user)):
+    """
+    Генерирует токен для привязки Telegram и возвращает ссылку для перехода в бота.
+    """
+    token = create_2fa_token(current_user.id)
+    bot_username = Config.TELEGRAM_BOT_USERNAME
+    link = f"https://t.me/{bot_username}?start={token}"
+    return {"link": link}
