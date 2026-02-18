@@ -691,6 +691,7 @@ nav a.active {
 
     .desktop-nav.show {
         display: flex;
+        background: var(--primary-gradient);
     }
 
     .desktop-nav a {
