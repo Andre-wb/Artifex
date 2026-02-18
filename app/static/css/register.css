@@ -387,6 +387,7 @@
 }
 
 [data-theme="dark"] .input {
+    background: var(--bg-lessons, #0f172a);
     color: var(--text-white, #f1f5f9);
 }
 
