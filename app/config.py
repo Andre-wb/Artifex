@@ -28,7 +28,7 @@ class Config:
     REFRESH_TOKEN_EXPIRE_DAYS = 80
 
     # Настройки загрузки файлов
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, '../static', 'uploads')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
     # Настройки безопасных cookie

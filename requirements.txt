@@ -31,3 +31,4 @@ easyocr
 apscheduler==3.10.0
 certifi
 google-api-python-client
+setuptools
