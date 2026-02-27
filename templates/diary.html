@@ -38,7 +38,7 @@
           <div class="lesson-homework"><img src="{{ url_for('static', path='assets/bx-book-bookmark.svg') }}"> {{ lesson.homework[:30] }}{% if lesson.homework|length > 30 %}...{% endif %}</div>
           {% endif %}
         </div>
-        <div class="lesson-grade {% if lesson.grades %}{% if lesson.grades[0].value >= 4 %}great{% elif lesson.grades[0].value == 3 %}normal{% else %}bad{% endif %}{% endif %}">
+        <div class="lesson-grade {% if lesson.grades %}{% if lesson.grades[0].value >= 4 %}great{% elif lesson.grades[0].value == 3 %}middle{% else %}bad{% endif %}{% endif %}">
           {% if lesson.grades %}{{ lesson.grades[0].value }}{% endif %}
         </div>
         <!-- Кнопка быстрого добавления оценки к уроку -->

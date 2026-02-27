@@ -276,3 +276,27 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .day-footer {
     color: var(--text-primary, white);
 }
+.lesson-grade {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-xl);
+    min-width: 35px;
+    text-align: center;
+    padding: var(--spacing-xs) 0;
+    border-radius: var(--border-radius-grade);
+    z-index: 2;
+}
+
+.great {
+    background: var(--grade-great-bg);
+    color: var(--grade-great-text);
+}
+
+.middle {
+    background: var(--grade-middle-bg);
+    color: var(--grade-middle-text);
+}
+
+.bad {
+    background: var(--grade-bad-bg);
+    color: var(--grade-bad-text);
+}
